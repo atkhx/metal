@@ -118,18 +118,6 @@ import (
 	"unsafe"
 )
 
-type Size struct {
-	W, H, D uint64
-}
-
-func ToMTLSize(r C.MTLSize) Size {
-	return Size{
-		W: uint64(r.width),
-		H: uint64(r.height),
-		D: uint64(r.depth),
-	}
-}
-
 type Device struct {
 	id unsafe.Pointer
 }
@@ -170,8 +158,8 @@ func (d *Device) GetArchitecture() string {
 	return C.GoString(C.mtlDeviceGetArchitecture(d.id))
 }
 
-func (d *Device) GetMaxThreadsPerThreadgroup() Size {
-	return ToMTLSize(C.mtlDeviceGetMaxThreadsPerThreadgroup(d.id))
+func (d *Device) GetMaxThreadsPerThreadgroup() MTLSize {
+	return MTLSizeFromC(C.mtlDeviceGetMaxThreadsPerThreadgroup(d.id))
 }
 
 func (d *Device) IsHeadless() bool {

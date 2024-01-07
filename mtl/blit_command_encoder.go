@@ -25,15 +25,6 @@ import (
 	"unsafe"
 )
 
-type NSRange struct {
-	Location uint64
-	Length   uint64
-}
-
-func (r NSRange) C() C.NSRange {
-	return C.NSRange(C.NSMakeRange(C.ulong(r.Location), C.ulong(r.Length)))
-}
-
 type BlitCommandEncoder struct {
 	id unsafe.Pointer
 }

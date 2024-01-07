@@ -88,8 +88,8 @@ func (m *Matrix) Release() {
 	C.mpsMatrixRelease(m.id)
 }
 
-func (a *Matrix) GetID() unsafe.Pointer {
-	return a.id
+func (m *Matrix) GetID() unsafe.Pointer {
+	return m.id
 }
 
 // GetRows The number of rows in a matrix in the Matrix.
@@ -141,7 +141,7 @@ func (m *Matrix) SynchronizeOnCommandBuffer(commandBuffer *mtl.CommandBuffer) {
 	C.mpsMatrixSynchronizeOnCommandBuffer(m.id, commandBuffer.GetID())
 }
 
-// GetResourceSize Get the number of bytes used to allocate underyling MTLResources.
+// GetResourceSize Get the number of bytes used to allocate underlying MTLResources.
 func (m *Matrix) GetResourceSize() int {
 	return int(C.mpsMatrixGetResourceSize(m.id))
 }
