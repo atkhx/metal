@@ -27,9 +27,9 @@ func TestMTLDeviceProperties(t *testing.T) {
 	maxThreadsPerThreadgroup := device.GetMaxThreadsPerThreadgroup()
 	t.Log("maxThreadsPerThreadgroup", maxThreadsPerThreadgroup)
 
-	require.Greater(t, maxThreadsPerThreadgroup.W, uint64(0))
-	require.Greater(t, maxThreadsPerThreadgroup.H, uint64(0))
-	require.Greater(t, maxThreadsPerThreadgroup.D, uint64(0))
+	require.Greater(t, maxThreadsPerThreadgroup.W, 0)
+	require.Greater(t, maxThreadsPerThreadgroup.H, 0)
+	require.Greater(t, maxThreadsPerThreadgroup.D, 0)
 
 	t.Log("isHeadless", device.IsHeadless())
 	t.Log("isRemovable", device.IsRemovable())

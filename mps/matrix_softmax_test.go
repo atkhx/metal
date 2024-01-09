@@ -71,7 +71,7 @@ func TestMatrixSoftMaxKernel(t *testing.T) {
 	softmaxKernel := CreateMatrixSoftMaxKernel(device)
 	defer softmaxKernel.Release()
 
-	softmaxGradientKernel := MatrixSoftMaxGradientKernelCreate(device)
+	softmaxGradientKernel := CreateMatrixSoftMaxGradientKernel(device)
 	defer softmaxGradientKernel.Release()
 
 	softmaxKernel.Encode(commandBuffer, inputMatrix, outputMatrix)

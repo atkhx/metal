@@ -40,7 +40,7 @@ type MatrixSoftMaxGradientKernel struct {
 	id unsafe.Pointer
 }
 
-func MatrixSoftMaxGradientKernelCreate(device *mtl.Device) *MatrixSoftMaxGradientKernel {
+func CreateMatrixSoftMaxGradientKernel(device *mtl.Device) *MatrixSoftMaxGradientKernel {
 	id := unsafe.Pointer(C.mpsMatrixSoftMaxGradientCreate(device.GetID()))
 	if id == nil {
 		panic("MPSMatrixSoftMaxGradient: id is empty")

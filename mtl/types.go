@@ -9,15 +9,36 @@ package mtl
 */
 import "C"
 
+const (
+	dimsWidthIdx  = 0
+	dimsHeightIdx = 1
+	dimsDepthIdx  = 2
+)
+
+func NewMTLSize(dims ...int) MTLSize {
+	if len(dims) > 3 {
+		panic("to much dimensions")
+	}
+
+	allDims := []int{1, 1, 1}
+	copy(allDims, dims)
+
+	return MTLSize{
+		W: allDims[dimsWidthIdx],
+		H: allDims[dimsHeightIdx],
+		D: allDims[dimsDepthIdx],
+	}
+}
+
 type MTLSize struct {
-	W, H, D uint64
+	W, H, D int
 }
 
 func MTLSizeFromC(s C.MTLSize) MTLSize {
 	return MTLSize{
-		W: uint64(s.width),
-		H: uint64(s.height),
-		D: uint64(s.depth),
+		W: int(s.width),
+		H: int(s.height),
+		D: int(s.depth),
 	}
 }
 
@@ -25,15 +46,23 @@ func (s MTLSize) C() C.MTLSize {
 	return C.MTLSizeMake(C.ulong(s.W), C.ulong(s.H), C.ulong(s.D))
 }
 
+func (s MTLSize) Length() int {
+	return s.W * s.H * s.D
+}
+
+func (s MTLSize) GetWHD() (int, int, int) {
+	return s.W, s.H, s.D
+}
+
 type NSRange struct {
-	Location uint64
-	Length   uint64
+	Location int
+	Length   int
 }
 
 func NSRangeFromC(r C.NSRange) NSRange {
 	return NSRange{
-		Location: uint64(r.location),
-		Length:   uint64(r.length),
+		Location: int(r.location),
+		Length:   int(r.length),
 	}
 }
 

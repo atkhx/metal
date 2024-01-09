@@ -111,6 +111,12 @@ void* mtlDeviceNewBufferWithBytes(void *deviceID, float *bytes, NSUInteger lengt
     return [(id<MTLDevice>)deviceID newBufferWithBytes:bytes length:length options:options];
 }
 
+void* mtlDeviceNewBufferWithLength(void *deviceID, size_t length, MTLResourceOptions options) {
+    return [(id<MTLDevice>)deviceID
+        newBufferWithLength:length
+        options:options];
+}
+
 */
 import "C"
 import (
@@ -252,6 +258,14 @@ func (d *Device) NewBufferWithFloats(data []float32, options resourceOptions) *B
 		d.id,
 		(*C.float)(unsafe.Pointer(&data[0])),
 		C.ulong(len(data)*int(unsafe.Sizeof(float32(0)))),
+		C.MTLResourceOptions(options),
+	))
+}
+
+func (d *Device) NewBufferEmptyFloatsBuffer(length int, options resourceOptions) *Buffer {
+	return CreateBuffer(C.mtlDeviceNewBufferWithLength(
+		d.id,
+		C.ulong(length*int(unsafe.Sizeof(float32(0)))),
 		C.MTLResourceOptions(options),
 	))
 }
