@@ -65,6 +65,7 @@ func (b *CommandBuffer) GetMTLCommandBuffer() *mtl.CommandBuffer {
 	return mtl.CreateCommandBuffer(b.GetMTLCommandBufferID())
 }
 
+// GetRootMTLCommandBufferID The ID of base MTLCommandBuffer underlying the MPSCommandBuffer
 func (b *CommandBuffer) GetRootMTLCommandBufferID() unsafe.Pointer {
 	return unsafe.Pointer(C.mpsCommandBufferGetRootMTLCommandBuffer(b.id))
 }
