@@ -28,12 +28,19 @@ type SwiGLU struct {
 }
 
 func (l *SwiGLU) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	weightK := l.initWeights.GetNormK(inputs.Dims.Length())
+	//weightK := l.initWeights.GetNormK(inputs.Dims.Length(), inputs.Dims.Length()) // todo calc fanOut
+	//weightK := float32(1.0)
 	inputWidth := device.GetDataDims(inputs).W
 
-	l.weights1 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.hiddenSize, inputWidth), weightK)
-	l.weights2 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.hiddenSize, inputWidth), weightK)
-	l.weights3 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.featuresCount, l.hiddenSize), weightK)
+	weightK12 := l.initWeights.GetNormK(inputWidth, l.hiddenSize)
+	weightK3 := l.initWeights.GetNormK(l.hiddenSize, l.featuresCount)
+
+	//l.weights1 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.hiddenSize, inputWidth), weightK)
+	l.weights1 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.hiddenSize, inputWidth), weightK12)
+	//l.weights2 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.hiddenSize, inputWidth), weightK)
+	l.weights2 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.hiddenSize, inputWidth), weightK12)
+	//l.weights3 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.featuresCount, l.hiddenSize), weightK)
+	l.weights3 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.featuresCount, l.hiddenSize), weightK3)
 
 	w1Projection := device.MatrixMultiply(inputs, l.weights1, 1)
 	w2Projection := device.MatrixMultiply(inputs, l.weights2, 1)

@@ -45,7 +45,9 @@ type SAMultiHead struct {
 }
 
 func (l *SAMultiHead) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	weightK := l.initWeights.GetNormK(inputs.Dims.Length())
+	//weightK := l.initWeights.GetNormK(inputs.Dims.Length(), inputs.Dims.Length()) // todo calc fanOut
+	weightK := l.initWeights.GetNormK(inputs.Dims.Length(), l.featuresCount)
+	//weightK := float32(1.0)
 	batchSize := inputs.Dims.D
 
 	l.QryWeights = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.featuresCount, l.featuresCount), weightK)

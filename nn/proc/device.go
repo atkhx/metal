@@ -1,6 +1,7 @@
 package proc
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/atkhx/metal/nn/ops/adamw"
 	"github.com/atkhx/metal/nn/ops/addequal"
 	"github.com/atkhx/metal/nn/ops/addrows"
+	"github.com/atkhx/metal/nn/ops/conv"
 	"github.com/atkhx/metal/nn/ops/dropout"
 	"github.com/atkhx/metal/nn/ops/embeddings"
 	"github.com/atkhx/metal/nn/ops/matmul"
@@ -59,9 +61,15 @@ func (d *Device) GetTrainingPipeline(lastNode *num.Data) *pipeline.TrainingPipel
 	return pipeline.NewTrainingPipeline(d.mtlDevice, lastNode)
 }
 
+func (d *Device) GetTrainingPipeline2(lastNode *num.Data) *pipeline.TrainingPipeline2 {
+	return pipeline.NewTrainingPipeline2(d.mtlDevice, lastNode)
+}
+
 func (d *Device) NewData(dims mtl.MTLSize, deps ...*num.Data) *num.Data {
 	return &num.Data{
+		//Data: d.mtlDevice.NewBufferWithFloats(make([]float32, dims.Length()), mtl.ResourceStorageModeShared),
 		Data: d.mtlDevice.NewBufferEmptyFloatsBuffer(dims.Length(), mtl.ResourceStorageModeShared),
+		//Grad: d.mtlDevice.NewBufferWithFloats(make([]float32, dims.Length()), mtl.ResourceStorageModeShared),
 		Grad: d.mtlDevice.NewBufferEmptyFloatsBuffer(dims.Length(), mtl.ResourceStorageModeShared),
 		Dims: dims,
 		Deps: deps,
@@ -71,6 +79,7 @@ func (d *Device) NewData(dims mtl.MTLSize, deps ...*num.Data) *num.Data {
 func (d *Device) NewDataWithValues(dims mtl.MTLSize, values []float32) *num.Data {
 	return &num.Data{
 		Data: d.mtlDevice.NewBufferWithFloats(values, mtl.ResourceStorageModeShared),
+		//Grad: d.mtlDevice.NewBufferWithFloats(make([]float32, dims.Length()), mtl.ResourceStorageModeShared),
 		Grad: d.mtlDevice.NewBufferEmptyFloatsBuffer(dims.Length(), mtl.ResourceStorageModeShared),
 		Dims: dims,
 	}
@@ -83,7 +92,8 @@ func (d *Device) newLinkedCopy(data *num.Data, links ...*num.Data) *num.Data {
 func (d *Device) NewDataRandNormWeighted(dims mtl.MTLSize, w float32) *num.Data {
 	data := make([]float32, dims.Length())
 	for i := range data {
-		data[i] = float32(rand.NormFloat64()) * w
+		data[i] = float32(rand.Float64())*2*w - w
+		//data[i] = float32(rand.NormFloat64()) * w
 	}
 
 	return d.NewDataWithValues(dims, data)
@@ -250,10 +260,14 @@ func (d *Device) CrossEntropyPos(input, targets *num.Data) *num.Data {
 	}
 
 	if targets.Dims.H != input.Dims.H {
+		fmt.Println("targets.Dims.H", targets.Dims.H)
+		fmt.Println("input.Dims.H", input.Dims.H)
 		panic("target height must be equal input height")
 	}
 
 	if targets.Dims.D != input.Dims.D {
+		fmt.Println("targets.Dims.D", targets.Dims.D)
+		fmt.Println("input.Dims.D", input.Dims.D)
 		panic("target depth must be equal input depth")
 	}
 
@@ -282,6 +296,21 @@ func (d *Device) MatrixMultiply(aData, bData *num.Data, alpha float32) *num.Data
 
 	output := d.NewData(mtl.MTLSize{W: oW, H: oH, D: oD}, aData, bData)
 	kernel := matmul.New(d.mtlDevice, aData, bData, output, alpha)
+	return d.assocKernel(output, kernel)
+}
+
+func (d *Device) GetConvSize(imageSize, filterSize, filtersCount, padding, stride int) mtl.MTLSize {
+	ow := (imageSize-filterSize+2*padding)/stride + 1
+	oh := (imageSize-filterSize+2*padding)/stride + 1
+	od := filtersCount
+
+	return mtl.MTLSize{W: ow, H: oh, D: od}
+}
+
+func (d *Device) Conv(input, weights, biases *num.Data, filtersCount, batchSize, padding, stride int) *num.Data {
+	convSize := d.GetConvSize(input.Dims.W, weights.Dims.W, filtersCount, padding, stride)
+	output := d.NewData(convSize, input, weights, biases)
+	kernel := conv.New(d.mtlDevice, input, weights, biases, output, filtersCount, batchSize, padding, stride)
 	return d.assocKernel(output, kernel)
 }
 

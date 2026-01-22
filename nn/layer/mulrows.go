@@ -28,9 +28,13 @@ type MulRows struct {
 }
 
 func (l *MulRows) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	weightK := l.initWeights.GetNormK(inputs.Dims.Length())
-
-	l.weightObj = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.width), weightK)
+	//weightK := l.initWeights.GetNormK(1, 1)
+	//l.weightObj = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.width), weightK)
+	values := make([]float32, l.width)
+	for i := range values {
+		values[i] = 1
+	}
+	l.weightObj = device.NewDataWithValues(mtl.NewMTLSize(l.width), values)
 	l.forUpdate = []*num.Data{l.weightObj}
 
 	return device.MulRow(inputs, l.weightObj, l.width)

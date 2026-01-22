@@ -5,26 +5,23 @@ import (
 	"testing"
 
 	"github.com/atkhx/metal/mtl"
-	"github.com/atkhx/metal/nn/pipeline"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDevice_AddEqual(t *testing.T) {
-	device := mtl.MustCreateSystemDefaultDevice()
+	device := NewWithSystemDefaultDevice()
 	defer device.Release()
 
-	ops := New(device)
-
-	aData := ops.NewDataWithValues(mtl.NewMTLSize(6), []float32{1, 2, 3, 4, 5, 6})
-	bData := ops.NewDataWithValues(mtl.NewMTLSize(6), []float32{2, 3, 4, 5, 6, 7})
-	cData := ops.AddEqual(aData, bData)
+	aData := device.NewDataWithValues(mtl.NewMTLSize(6), []float32{1, 2, 3, 4, 5, 6})
+	bData := device.NewDataWithValues(mtl.NewMTLSize(6), []float32{2, 3, 4, 5, 6, 7})
+	cData := device.AddEqual(aData, bData)
 
 	expectedResult := []float32{3, 5, 7, 9, 11, 13}
 	cGradsValues := []float32{3, 4, 5, 6, 7, 8}
 
 	copy(cData.Grad.GetFloats(), cGradsValues)
 
-	b := device.NewCommandQueue().GetNewMTLCommandBuffer()
+	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
 	defer b.Release()
 
 	cData.CalcData(b)
@@ -39,12 +36,10 @@ func TestDevice_AddEqual(t *testing.T) {
 }
 
 func TestDevice_AddRow(t *testing.T) {
-	device := mtl.MustCreateSystemDefaultDevice()
+	device := NewWithSystemDefaultDevice()
 	defer device.Release()
 
-	ops := New(device)
-
-	aData := ops.NewDataWithValues(mtl.NewMTLSize(3, 2, 2), []float32{
+	aData := device.NewDataWithValues(mtl.NewMTLSize(3, 2, 2), []float32{
 		1, 2, 3,
 		4, 5, 6,
 
@@ -52,11 +47,11 @@ func TestDevice_AddRow(t *testing.T) {
 		5, 6, 7,
 	})
 
-	bData := ops.NewDataWithValues(mtl.NewMTLSize(3), []float32{
+	bData := device.NewDataWithValues(mtl.NewMTLSize(3), []float32{
 		1, 3, 5,
 	})
 
-	cData := ops.AddRow(aData, bData, 3)
+	cData := device.AddRow(aData, bData, 3)
 
 	expectedResult := []float32{
 		2, 5, 8,
@@ -81,7 +76,7 @@ func TestDevice_AddRow(t *testing.T) {
 
 	copy(cData.Grad.GetFloats(), cGradsValues)
 
-	b := device.NewCommandQueue().GetNewMTLCommandBuffer()
+	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
 	defer b.Release()
 
 	cData.CalcData(b)
@@ -96,12 +91,10 @@ func TestDevice_AddRow(t *testing.T) {
 }
 
 func TestDevice_MulCol(t *testing.T) {
-	device := mtl.MustCreateSystemDefaultDevice()
+	device := NewWithSystemDefaultDevice()
 	defer device.Release()
 
-	ops := New(device)
-
-	aData := ops.NewDataWithValues(mtl.NewMTLSize(3, 2, 2), []float32{
+	aData := device.NewDataWithValues(mtl.NewMTLSize(3, 2, 2), []float32{
 		1, 2, 3,
 		4, 5, 6,
 
@@ -109,12 +102,12 @@ func TestDevice_MulCol(t *testing.T) {
 		5, 6, 7,
 	})
 
-	bData := ops.NewDataWithValues(mtl.NewMTLSize(1, 2), []float32{
+	bData := device.NewDataWithValues(mtl.NewMTLSize(1, 2), []float32{
 		2,
 		2,
 	})
 
-	cData := ops.MulCol(aData, bData, 1, 2)
+	cData := device.MulCol(aData, bData, 1, 2)
 
 	expectedResult := []float32{
 		2, 4, 6,
@@ -147,7 +140,7 @@ func TestDevice_MulCol(t *testing.T) {
 
 	copy(cData.Grad.GetFloats(), cGradsValues)
 
-	b := device.NewCommandQueue().GetNewMTLCommandBuffer()
+	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
 	defer b.Release()
 
 	cData.CalcData(b)
@@ -162,12 +155,10 @@ func TestDevice_MulCol(t *testing.T) {
 }
 
 func TestDevice_MulRow(t *testing.T) {
-	device := mtl.MustCreateSystemDefaultDevice()
+	device := NewWithSystemDefaultDevice()
 	defer device.Release()
 
-	ops := New(device)
-
-	aData := ops.NewDataWithValues(mtl.NewMTLSize(3, 2, 2), []float32{
+	aData := device.NewDataWithValues(mtl.NewMTLSize(3, 2, 2), []float32{
 		1, 2, 3,
 		4, 5, 6,
 
@@ -175,11 +166,11 @@ func TestDevice_MulRow(t *testing.T) {
 		5, 6, 7,
 	})
 
-	bData := ops.NewDataWithValues(mtl.NewMTLSize(3), []float32{
+	bData := device.NewDataWithValues(mtl.NewMTLSize(3), []float32{
 		2, 2, 2,
 	})
 
-	cData := ops.MulRow(aData, bData, 3)
+	cData := device.MulRow(aData, bData, 3)
 
 	expectedResult := []float32{
 		2, 4, 6,
@@ -211,7 +202,7 @@ func TestDevice_MulRow(t *testing.T) {
 
 	copy(cData.Grad.GetFloats(), cGradsValues)
 
-	b := device.NewCommandQueue().GetNewMTLCommandBuffer()
+	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
 	defer b.Release()
 
 	cData.CalcData(b)
@@ -226,12 +217,10 @@ func TestDevice_MulRow(t *testing.T) {
 }
 
 func TestDevice_MulEqual(t *testing.T) {
-	device := mtl.MustCreateSystemDefaultDevice()
+	device := NewWithSystemDefaultDevice()
 	defer device.Release()
 
-	ops := New(device)
-
-	aData := ops.NewDataWithValues(mtl.NewMTLSize(3, 2, 2), []float32{
+	aData := device.NewDataWithValues(mtl.NewMTLSize(3, 2, 2), []float32{
 		1, 2, 3,
 		4, 5, 6,
 
@@ -239,7 +228,7 @@ func TestDevice_MulEqual(t *testing.T) {
 		5, 6, 7,
 	})
 
-	bData := ops.NewDataWithValues(mtl.NewMTLSize(3, 2, 2), []float32{
+	bData := device.NewDataWithValues(mtl.NewMTLSize(3, 2, 2), []float32{
 		2, 3, 4,
 		5, 6, 7,
 
@@ -247,7 +236,7 @@ func TestDevice_MulEqual(t *testing.T) {
 		6, 7, 8,
 	})
 
-	cData := ops.MulEqual(aData, bData)
+	cData := device.MulEqual(aData, bData)
 
 	expectedResult := []float32{
 		2, 6, 12,
@@ -283,7 +272,7 @@ func TestDevice_MulEqual(t *testing.T) {
 
 	copy(cData.Grad.GetFloats(), cGradsValues)
 
-	b := device.NewCommandQueue().GetNewMTLCommandBuffer()
+	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
 	defer b.Release()
 
 	cData.CalcData(b)
@@ -298,17 +287,15 @@ func TestDevice_MulEqual(t *testing.T) {
 }
 
 func TestDevice_RMSNorm(t *testing.T) {
-	device := mtl.MustCreateSystemDefaultDevice()
+	device := NewWithSystemDefaultDevice()
 	defer device.Release()
 
-	ops := New(device)
-
-	aData := ops.NewDataWithValues(mtl.NewMTLSize(3, 2), []float32{
+	aData := device.NewDataWithValues(mtl.NewMTLSize(3, 2), []float32{
 		1, 2, 3,
 		4, 5, 6,
 	})
 
-	cData := ops.RMSNorm(aData, 3)
+	cData := device.RMSNorm(aData, 3)
 
 	expectedResult := []float32{
 		0.46290955, 0.9258191, 1.3887286,
@@ -327,7 +314,7 @@ func TestDevice_RMSNorm(t *testing.T) {
 
 	copy(cData.Grad.GetFloats(), cGradsValues)
 
-	b := device.NewCommandQueue().GetNewMTLCommandBuffer()
+	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
 	defer b.Release()
 
 	cData.CalcData(b)
@@ -341,15 +328,13 @@ func TestDevice_RMSNorm(t *testing.T) {
 }
 
 func TestDevice_RopeCols(t *testing.T) {
-	device := mtl.MustCreateSystemDefaultDevice()
+	device := NewWithSystemDefaultDevice()
 	defer device.Release()
-
-	ops := New(device)
 
 	headsCount, headSize, contextLength := 3, 2, 3
 	featuresCount := headsCount * headSize
 
-	aData := ops.NewDataWithValues(mtl.NewMTLSize(contextLength, headSize, headsCount), []float32{
+	aData := device.NewDataWithValues(mtl.NewMTLSize(contextLength, headSize, headsCount), []float32{
 		1, 2, 3,
 		4, 5, 6,
 
@@ -360,7 +345,7 @@ func TestDevice_RopeCols(t *testing.T) {
 		8, 9, 10,
 	})
 
-	cData := ops.RopeCols(aData, featuresCount, headSize, contextLength)
+	cData := device.RopeCols(aData, featuresCount, headSize, contextLength)
 
 	expectedResult := []float32{
 
@@ -398,7 +383,7 @@ func TestDevice_RopeCols(t *testing.T) {
 
 	copy(cData.Grad.GetFloats(), cGradsValues)
 
-	b := device.NewCommandQueue().GetNewMTLCommandBuffer()
+	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
 	defer b.Release()
 
 	cData.CalcData(b)
@@ -412,18 +397,16 @@ func TestDevice_RopeCols(t *testing.T) {
 }
 
 func TestDevice_Relu(t *testing.T) {
-	device := mtl.MustCreateSystemDefaultDevice()
+	device := NewWithSystemDefaultDevice()
 	defer device.Release()
 
-	ops := New(device)
-
-	aData := ops.NewDataWithValues(mtl.NewMTLSize(3, 3), []float32{
+	aData := device.NewDataWithValues(mtl.NewMTLSize(3, 3), []float32{
 		-1, 0, 1,
 		2, 0.1, -1,
 		-0, 1, 1,
 	})
 
-	cData := ops.Relu(aData)
+	cData := device.Relu(aData)
 
 	expectedResult := []float32{
 		0, 0, 1,
@@ -445,7 +428,7 @@ func TestDevice_Relu(t *testing.T) {
 
 	copy(cData.Grad.GetFloats(), cGradsValues)
 
-	b := device.NewCommandQueue().GetNewMTLCommandBuffer()
+	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
 	defer b.Release()
 
 	cData.CalcData(b)
@@ -471,12 +454,10 @@ func TestDevice_Reshape(t *testing.T) {
 }
 
 func TestDevice_TrilMask(t *testing.T) {
-	device := mtl.MustCreateSystemDefaultDevice()
+	device := NewWithSystemDefaultDevice()
 	defer device.Release()
 
-	ops := New(device)
-
-	aData := ops.NewDataWithValues(mtl.NewMTLSize(3, 3, 2), []float32{
+	aData := device.NewDataWithValues(mtl.NewMTLSize(3, 3, 2), []float32{
 		1, 2, 3,
 		4, 5, 6,
 		7, 8, 9,
@@ -486,7 +467,7 @@ func TestDevice_TrilMask(t *testing.T) {
 		8, 9, 0,
 	})
 
-	cData := ops.TrilMask(aData)
+	cData := device.TrilMask(aData)
 
 	i := float32(math.Inf(-1))
 
@@ -522,7 +503,7 @@ func TestDevice_TrilMask(t *testing.T) {
 
 	copy(cData.Grad.GetFloats(), cGradsValues)
 
-	b := device.NewCommandQueue().GetNewMTLCommandBuffer()
+	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
 	defer b.Release()
 
 	cData.CalcData(b)
@@ -540,12 +521,10 @@ func TestDevice_Softmax(t *testing.T) {
 }
 
 func TestDevice_TriangleLowerSoftmax(t *testing.T) {
-	device := mtl.MustCreateSystemDefaultDevice()
+	device := NewWithSystemDefaultDevice()
 	defer device.Release()
 
-	ops := New(device)
-
-	aData := ops.NewDataWithValues(mtl.NewMTLSize(3, 3, 2), []float32{
+	aData := device.NewDataWithValues(mtl.NewMTLSize(3, 3, 2), []float32{
 		1, 2, 3,
 		4, 5, 6,
 		7, 8, 9,
@@ -555,9 +534,9 @@ func TestDevice_TriangleLowerSoftmax(t *testing.T) {
 		8, 9, 1,
 	})
 
-	cData := ops.TriangleLowerSoftmax(aData)
+	cData := device.TriangleLowerSoftmax(aData)
 
-	pipe := pipeline.NewTestingPipeline(device, cData)
+	pipe := device.GetTestingPipeline(cData)
 
 	expectedResult := []float32{
 		1, 0, 0,
@@ -599,12 +578,10 @@ func TestDevice_TriangleLowerSoftmax(t *testing.T) {
 }
 
 func TestDevice_Transpose(t *testing.T) {
-	device := mtl.MustCreateSystemDefaultDevice()
+	device := NewWithSystemDefaultDevice()
 	defer device.Release()
 
-	ops := New(device)
-
-	aData := ops.NewDataWithValues(mtl.NewMTLSize(3, 3, 2), []float32{
+	aData := device.NewDataWithValues(mtl.NewMTLSize(3, 3, 2), []float32{
 		1, 2, 3,
 		4, 5, 6,
 		7, 8, 9,
@@ -614,7 +591,7 @@ func TestDevice_Transpose(t *testing.T) {
 		8, 9, 0,
 	})
 
-	cData := ops.Transpose(aData)
+	cData := device.Transpose(aData)
 
 	expectedResult := []float32{
 		1, 4, 7,
@@ -648,7 +625,7 @@ func TestDevice_Transpose(t *testing.T) {
 
 	copy(cData.Grad.GetFloats(), cGradsValues)
 
-	b := device.NewCommandQueue().GetNewMTLCommandBuffer()
+	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
 	defer b.Release()
 
 	cData.CalcData(b)
@@ -662,12 +639,10 @@ func TestDevice_Transpose(t *testing.T) {
 }
 
 func TestDevice_Embeddings(t *testing.T) {
-	device := mtl.MustCreateSystemDefaultDevice()
+	device := NewWithSystemDefaultDevice()
 	defer device.Release()
 
-	ops := New(device)
-
-	tEmbeddings := ops.NewDataWithValues(mtl.NewMTLSize(3, 6), []float32{
+	tEmbeddings := device.NewDataWithValues(mtl.NewMTLSize(3, 6), []float32{
 		1, 2, 3,
 		2, 3, 4,
 		3, 4, 5,
@@ -677,11 +652,11 @@ func TestDevice_Embeddings(t *testing.T) {
 		6, 7, 8,
 	})
 
-	aData := ops.NewDataWithValues(mtl.NewMTLSize(3), []float32{
+	aData := device.NewDataWithValues(mtl.NewMTLSize(3), []float32{
 		0, 3, 5,
 	})
 
-	cData := ops.Embeddings(aData, tEmbeddings)
+	cData := device.Embeddings(aData, tEmbeddings)
 
 	expectedResult := []float32{
 		1, 2, 3,
@@ -706,7 +681,7 @@ func TestDevice_Embeddings(t *testing.T) {
 
 	copy(cData.Grad.GetFloats(), cGradsValues)
 
-	b := device.NewCommandQueue().GetNewMTLCommandBuffer()
+	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
 	defer b.Release()
 
 	cData.CalcData(b)
@@ -717,4 +692,75 @@ func TestDevice_Embeddings(t *testing.T) {
 
 	require.Equal(t, expectedResult, cData.Data.GetFloats())
 	require.Equal(t, expectedEGrads, tEmbeddings.Grad.GetFloats())
+}
+
+func TestDevice_Conv(t *testing.T) {
+	device := NewWithSystemDefaultDevice()
+	defer device.Release()
+
+	input := device.NewDataWithValues(mtl.NewMTLSize(5, 5, 2), []float32{
+		1, 2, 3, 4, 5,
+		2, 3, 4, 5, 6,
+		3, 4, 5, 6, 7,
+		4, 5, 6, 7, 8,
+		5, 6, 7, 8, 9,
+
+		1, 1, 1, 1, 1,
+		2, 2, 2, 2, 2,
+		3, 3, 3, 3, 3,
+		4, 4, 4, 4, 4,
+		5, 5, 5, 5, 5,
+	})
+
+	weights := device.NewDataWithValues(mtl.NewMTLSize(3, 3, 2), []float32{
+		1, 2, 3,
+		2, 3, 4,
+		4, 5, 6,
+
+		1, 1, 1,
+		2, 2, 2,
+		3, 3, 3,
+	})
+
+	expectedOutputData := []float32{
+		3 +
+			1*1 + 2*2 + 3*3 +
+			2*2 + 3*3 + 4*4 +
+			3*4 + 4*5 + 5*6 +
+			0 +
+			1*1 + 1*1 + 1*1 +
+			2*2 + 2*2 + 2*2 +
+			3*3 + 3*3 + 3*3,
+
+		3 +
+			2*1 + 3*2 + 4*3 +
+			3*2 + 4*3 + 5*4 +
+			4*4 + 5*5 + 6*6 +
+			0 +
+			1*1 + 1*1 + 1*1 +
+			2*2 + 2*2 + 2*2 +
+			3*3 + 3*3 + 3*3,
+
+		210, 198, 228, 258, 246, 276, 306,
+	}
+
+	biases := device.NewDataWithValues(mtl.NewMTLSize(1, 1, 1), []float32{
+		3,
+	})
+
+	padding := 0
+	stride := 1
+
+	output := device.Conv(input, weights, biases, padding, stride)
+
+	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
+	defer b.Release()
+
+	output.CalcData(b)
+	output.CalcGrad(b)
+
+	b.Commit()
+	b.WaitUntilCompleted()
+
+	require.Equal(t, expectedOutputData, output.Data.GetFloats())
 }

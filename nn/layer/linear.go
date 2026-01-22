@@ -35,11 +35,16 @@ type Linear struct {
 	forUpdate []*num.Data
 }
 
-func (l *Linear) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	weightK := l.initWeights.GetNormK(inputs.Dims.Length())
-	inputWidth := device.GetDataDims(inputs).W
+func (l *Linear) GetWeights() *num.Data {
+	return l.weightObj
+}
 
-	l.weightObj = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.featuresCount, inputWidth), weightK)
+func (l *Linear) Compile(device *proc.Device, inputs *num.Data) *num.Data {
+	inputWidth := device.GetDataDims(inputs).W
+	outputDims := mtl.NewMTLSize(l.featuresCount, inputWidth)
+	weightK := l.initWeights.GetNormK(inputWidth, l.featuresCount)
+
+	l.weightObj = device.NewDataRandNormWeighted(outputDims, weightK)
 	l.forUpdate = []*num.Data{l.weightObj}
 
 	result := device.MatrixMultiply(inputs, l.weightObj, 1)
