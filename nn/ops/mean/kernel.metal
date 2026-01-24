@@ -21,5 +21,5 @@ kernel void meanByRowsGrads(
     constant uint& chunkSize [[ buffer(2) ]],
     const uint id [[ thread_position_in_grid ]] )
 {
-    inputGrad[id] += outputGrad[id/chunkSize];
+    inputGrad[id] += outputGrad[id/chunkSize] / float(chunkSize);
 }

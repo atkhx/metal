@@ -27,8 +27,8 @@ kernel void trilMaskBwd(
 {
     uint i = gid.z*colsCount*rowsCount + gid.y*colsCount + gid.x;
     if (gid.x > gid.y) {
-        inputGrad[i] = 0;
+        inputGrad[i] += 0;
     } else {
-        inputGrad[i] = outputGrad[i];
+        inputGrad[i] += outputGrad[i];
     }
 }

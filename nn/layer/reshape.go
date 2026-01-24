@@ -14,6 +14,6 @@ type Reshape struct {
 	dims mtl.MTLSize
 }
 
-func (l *Reshape) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	return device.Reshape(inputs, l.dims)
+func (l *Reshape) Compile(device *proc.Device, input *num.Data) *num.Data {
+	return device.Reshape(input, l.dims)
 }

@@ -13,6 +13,6 @@ type Dropout struct {
 	dropoutProb float32
 }
 
-func (l *Dropout) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	return device.Dropout(inputs, l.dropoutProb)
+func (l *Dropout) Compile(device *proc.Device, input *num.Data) *num.Data {
+	return device.Dropout(input, l.dropoutProb)
 }

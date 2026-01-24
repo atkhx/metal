@@ -10,3 +10,22 @@ const (
 type Initializer interface {
 	GetNormK(fanIn, fanOut int) float32
 }
+
+type Distribution int
+
+const (
+	DistributionUniform Distribution = iota
+	DistributionNormal
+)
+
+// DistributionProvider allows layers to choose the matching RNG distribution.
+type DistributionProvider interface {
+	Distribution() Distribution
+}
+
+func DefaultOnNil(cur, def Initializer) Initializer {
+	if cur == nil {
+		return def
+	}
+	return cur
+}

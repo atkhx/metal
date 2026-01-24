@@ -6,15 +6,15 @@ import (
 )
 
 func NewReLu() *Activation {
-	return &Activation{inputsAct: func(device *proc.Device, inputs *num.Data) *num.Data {
-		return device.Relu(inputs)
+	return &Activation{activation: func(device *proc.Device, input *num.Data) *num.Data {
+		return device.Relu(input)
 	}}
 }
 
 type Activation struct {
-	inputsAct func(device *proc.Device, inputs *num.Data) *num.Data
+	activation func(device *proc.Device, input *num.Data) *num.Data
 }
 
-func (l *Activation) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	return l.inputsAct(device, inputs)
+func (l *Activation) Compile(device *proc.Device, input *num.Data) *num.Data {
+	return l.activation(device, input)
 }

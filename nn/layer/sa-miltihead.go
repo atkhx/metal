@@ -18,6 +18,9 @@ func NewSAMultiHead(
 	initWeights initializer.Initializer,
 	provideWeights func(qw, kw, vw *num.Data),
 ) *SAMultiHead {
+	if initWeights == nil {
+		initWeights = initializer.XavierNormalLinear
+	}
 	return &SAMultiHead{
 		initWeights:    initWeights,
 		featuresCount:  featuresCount,
@@ -44,19 +47,18 @@ type SAMultiHead struct {
 	headSize      int
 }
 
-func (l *SAMultiHead) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	//weightK := l.initWeights.GetNormK(inputs.Dims.Length(), inputs.Dims.Length()) // todo calc fanOut
-	weightK := l.initWeights.GetNormK(inputs.Dims.Length(), l.featuresCount)
-	//weightK := float32(1.0)
-	batchSize := inputs.Dims.D
+func (l *SAMultiHead) Compile(device *proc.Device, input *num.Data) *num.Data {
+	fanIn := input.Dims.Length()
+	fanOut := l.featuresCount
+	batchSize := input.Dims.D
 
-	l.QryWeights = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.featuresCount, l.featuresCount), weightK)
-	l.KeyWeights = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.featuresCount, l.featuresCount), weightK)
-	l.ValWeights = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.featuresCount, l.featuresCount), weightK)
+	l.QryWeights = initWeights(device, l.initWeights, mtl.NewMTLSize(l.featuresCount, l.featuresCount), fanIn, fanOut)
+	l.KeyWeights = initWeights(device, l.initWeights, mtl.NewMTLSize(l.featuresCount, l.featuresCount), fanIn, fanOut)
+	l.ValWeights = initWeights(device, l.initWeights, mtl.NewMTLSize(l.featuresCount, l.featuresCount), fanIn, fanOut)
 
 	l.forUpdate = []*num.Data{l.QryWeights, l.KeyWeights, l.ValWeights}
 
-	bx := device.Transpose(inputs) // bx - vertical
+	bx := device.Transpose(input) // bx - vertical
 
 	// Extract qkv-objects
 	qryObject := device.MatrixMultiply(l.QryWeights, bx, 1)
@@ -103,14 +105,14 @@ func (l *SAMultiHead) ForUpdate() []*num.Data {
 	return l.forUpdate
 }
 
-type SAMultiHeadRope2Config struct {
+type saMultiHeadConfig struct {
 	QryWeights []float32
 	KeyWeights []float32
 	ValWeights []float32
 }
 
 func (l *SAMultiHead) MarshalJSON() ([]byte, error) {
-	config := SAMultiHeadRope2Config{
+	config := saMultiHeadConfig{
 		QryWeights: l.QryWeights.Data.GetFloats(),
 		KeyWeights: l.KeyWeights.Data.GetFloats(),
 		ValWeights: l.ValWeights.Data.GetFloats(),
@@ -119,7 +121,7 @@ func (l *SAMultiHead) MarshalJSON() ([]byte, error) {
 }
 
 func (l *SAMultiHead) UnmarshalJSON(bytes []byte) error {
-	config := SAMultiHeadRope2Config{
+	config := saMultiHeadConfig{
 		QryWeights: l.QryWeights.Data.GetFloats(),
 		KeyWeights: l.KeyWeights.Data.GetFloats(),
 		ValWeights: l.ValWeights.Data.GetFloats(),

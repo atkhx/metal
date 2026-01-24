@@ -17,6 +17,6 @@ type LinearWithWeights struct {
 	weightObj *num.Data
 }
 
-func (l *LinearWithWeights) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	return device.MatrixMultiply(inputs, l.weightObj, 1)
+func (l *LinearWithWeights) Compile(device *proc.Device, input *num.Data) *num.Data {
+	return device.MatrixMultiply(input, l.weightObj, 1)
 }

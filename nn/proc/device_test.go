@@ -751,7 +751,7 @@ func TestDevice_Conv(t *testing.T) {
 	padding := 0
 	stride := 1
 
-	output := device.Conv(input, weights, biases, padding, stride)
+	output := device.Conv(input, weights, biases, 1, 1, padding, stride)
 
 	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
 	defer b.Release()

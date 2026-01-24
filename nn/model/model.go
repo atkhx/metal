@@ -32,31 +32,30 @@ func New(
 }
 
 type Model struct {
-	inDims      mtl.MTLSize
-	inputs      *num.Data
-	output      *num.Data
-	Layers      layer.Layers
-	dataObjects []*num.Data
-	update      []*num.Data
-	device      *proc.Device
+	inDims mtl.MTLSize
+	input  *num.Data
+	output *num.Data
+	Layers layer.Layers
+	outObj []*num.Data
+	update []*num.Data
+	device *proc.Device
 
 	optimizer  proc.Optimizer
 	updateFunc func(b *mtl.CommandBuffer, iteration int)
 }
 
 func (s *Model) Compile() *num.Data {
-	s.inputs = s.device.NewData(s.inDims)
-	s.dataObjects, s.output = s.Layers.CompileAndReturnDataObjects(s.device, s.inputs)
+	s.input = s.device.NewData(s.inDims)
+	s.outObj, s.output = s.Layers.Compile(s.device, s.input)
 	s.update = append(s.update, s.Layers.ForUpdate()...)
 	if s.optimizer != nil {
 		s.updateFunc = s.optimizer(s.update)
 	}
-
 	return s.output
 }
 
 func (s *Model) GetInput() *num.Data {
-	return s.inputs
+	return s.input
 }
 
 func (s *Model) GetOutput() *num.Data {
@@ -64,7 +63,7 @@ func (s *Model) GetOutput() *num.Data {
 }
 
 func (s *Model) GetDataObjects() []*num.Data {
-	return s.dataObjects
+	return s.outObj
 }
 
 func (s *Model) GetTrainableParamsCount() (result int) {

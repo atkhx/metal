@@ -13,8 +13,9 @@ type Residual struct {
 	Layers Layers
 }
 
-func (l *Residual) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	return device.Add(inputs, l.Layers.Compile(device, inputs))
+func (l *Residual) Compile(device *proc.Device, input *num.Data) *num.Data {
+	_, output := l.Layers.Compile(device, input)
+	return device.Add(input, output)
 }
 
 func (l *Residual) ForUpdate() []*num.Data {

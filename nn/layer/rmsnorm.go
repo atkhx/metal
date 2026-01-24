@@ -11,6 +11,6 @@ func NewRMSLNorm() *RMSNorm {
 
 type RMSNorm struct{}
 
-func (l *RMSNorm) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	return device.RMSNorm(inputs, inputs.Dims.W)
+func (l *RMSNorm) Compile(device *proc.Device, input *num.Data) *num.Data {
+	return device.RMSNorm(input, input.Dims.W)
 }

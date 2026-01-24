@@ -19,6 +19,9 @@ func NewConv(
 	initWeights initializer.Initializer,
 	provideWeights func(weights *num.Data),
 ) *Conv {
+	if initWeights == nil {
+		initWeights = initializer.KaimingNormalReLU
+	}
 	if stride < 1 {
 		stride = 1
 	}
@@ -60,20 +63,19 @@ func (l *Conv) GetWeights() *num.Data {
 	return l.weightObj
 }
 
-func (l *Conv) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	filterDepth := device.GetDataDims(inputs).D
+func (l *Conv) Compile(device *proc.Device, input *num.Data) *num.Data {
+	filterDepth := input.Dims.D
 
 	fanIn := l.filterSize * l.filterSize * filterDepth
 	fanOut := l.filterSize * l.filterSize * l.filtersCount
 
-	weightK := l.initWeights.GetNormK(fanIn, fanOut)
 	mFilterSize := mtl.NewMTLSize(l.filterSize, l.filterSize, filterDepth*l.filtersCount)
 
-	l.weightObj = device.NewDataRandNormWeighted(mFilterSize, weightK)
+	l.weightObj = initWeights(device, l.initWeights, mFilterSize, fanIn, fanOut)
 	l.biasesObj = device.NewData(mtl.NewMTLSize(1, 1, l.filtersCount))
 	l.forUpdate = []*num.Data{l.weightObj, l.biasesObj}
 
-	return device.Conv(inputs, l.weightObj, l.biasesObj, l.filtersCount, l.batchSize, l.padding, l.stride)
+	return device.Conv(input, l.weightObj, l.biasesObj, l.filtersCount, l.batchSize, l.padding, l.stride)
 }
 
 func (l *Conv) ForUpdate() []*num.Data {
