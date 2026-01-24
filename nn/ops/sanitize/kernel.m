@@ -11,11 +11,11 @@ static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
     return MTLSizeMake(w, 1, 1);
 }
 
-@implementation SiluKernelImpl {
+@implementation SanitizeKernelImpl {
     id<MTLDevice> _device;
 
-    id<MTLComputePipelineState> _siluPSO;
-    id<MTLComputePipelineState> _siluGradsPSO;
+    id<MTLComputePipelineState> _sanitizePSO;
+    id<MTLComputePipelineState> _sanitizeGradsPSO;
 
     NSError *error;
 }
@@ -43,8 +43,8 @@ static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
 
         self.library = [_device newLibraryWithSource:kernelSource options:nil error:&error];
 
-        _siluPSO = [self createPipelineStateWithFunctionName:@"silu"];
-        _siluGradsPSO = [self createPipelineStateWithFunctionName:@"siluGrads"];
+        _sanitizePSO      = [self createPipelineStateWithFunctionName:@"sanitize"];
+        _sanitizeGradsPSO = [self createPipelineStateWithFunctionName:@"sanitizeGrads"];
     }
     return self;
 }
@@ -53,30 +53,30 @@ static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
         inputData:(id<MTLBuffer>)inputData
         outputData:(id<MTLBuffer>)outputData
 {
-    id<MTLComputeCommandEncoder> silu = [commandBuffer computeCommandEncoder];
+    id<MTLComputeCommandEncoder> sanitize = [commandBuffer computeCommandEncoder];
 
-    [silu setComputePipelineState:_siluPSO];
-    [silu setBuffer:inputData offset:0 atIndex:0];
-    [silu setBuffer:outputData offset:0 atIndex:1];
-    [silu dispatchThreads:MTLSizeMake(outputData.length / sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_siluPSO)];
-    [silu endEncoding];
+    [sanitize setComputePipelineState:_sanitizePSO];
+    [sanitize setBuffer:inputData offset:0 atIndex:0];
+    [sanitize setBuffer:outputData offset:0 atIndex:1];
+
+    [sanitize dispatchThreads:MTLSizeMake(outputData.length / sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_sanitizePSO)];
+    [sanitize endEncoding];
 }
 
 - (void) backward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
         inputGrad:(id<MTLBuffer>)inputGrad
-        outputData:(id<MTLBuffer>)outputData
         outputGrad:(id<MTLBuffer>)outputGrad
 {
-    id<MTLComputeCommandEncoder> siluGrads = [commandBuffer computeCommandEncoder];
+    id<MTLComputeCommandEncoder> sanitizeGrads = [commandBuffer computeCommandEncoder];
 
-    [siluGrads setComputePipelineState:_siluGradsPSO];
-    [siluGrads setBuffer:inputData offset:0 atIndex:0];
-    [siluGrads setBuffer:inputGrad offset:0 atIndex:1];
-    [siluGrads setBuffer:outputData offset:0 atIndex:2];
-    [siluGrads setBuffer:outputGrad offset:0 atIndex:3];
-    [siluGrads dispatchThreads:MTLSizeMake(inputGrad.length / sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_siluGradsPSO)];
-    [siluGrads endEncoding];
+    [sanitizeGrads setComputePipelineState:_sanitizeGradsPSO];
+    [sanitizeGrads setBuffer:inputData offset:0 atIndex:0];
+    [sanitizeGrads setBuffer:inputGrad offset:0 atIndex:1];
+    [sanitizeGrads setBuffer:outputGrad offset:0 atIndex:2];
+
+    [sanitizeGrads dispatchThreads:MTLSizeMake(inputGrad.length / sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_sanitizeGradsPSO)];
+    [sanitizeGrads endEncoding];
 }
 
 @end

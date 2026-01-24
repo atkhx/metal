@@ -9,7 +9,12 @@ kernel void nllByPos(
     constant uint& width [[ buffer(3) ]],
     const uint id [[ thread_position_in_grid ]] )
 {
-    output[id] = -log(softmax[id * width + int(targets[id])]);
+    const float eps = 1e-9;
+    float p = softmax[id * width + int(targets[id])];
+    if (p < eps) {
+        p = eps;
+    }
+    output[id] = -log(p);
 }
 
 kernel void nllByPosBwd(

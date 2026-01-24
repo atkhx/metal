@@ -22,7 +22,8 @@ void adamWUpdate(
     float beta1,
     float beta2,
     float beta1powIterationLR,
-    float beta2powIteration
+    float beta2powIteration,
+    float eps
 ) {
     [(__bridge MPSAdamWImpl*)kernelID updateWithAdam:(id<MTLCommandBuffer>)commandBufferID
         dataBuffer:(id<MTLBuffer>)dataBufferID
@@ -32,7 +33,8 @@ void adamWUpdate(
         beta1:beta1
         beta2:beta2
         beta1powIterationLR:beta1powIterationLR
-        beta2powIteration:beta2powIteration];
+        beta2powIteration:beta2powIteration
+        eps:eps];
 }
 
 
@@ -72,6 +74,7 @@ func (k *Kernel) UpdateWithAdam(
 	beta2 float32,
 	beta1powIterationLR float32,
 	beta2powIteration float32,
+	eps float32,
 ) {
 	C.adamWUpdate(
 		k.kernelID,
@@ -86,5 +89,6 @@ func (k *Kernel) UpdateWithAdam(
 		C.float(beta2),
 		C.float(beta1powIterationLR),
 		C.float(beta2powIteration),
+		C.float(eps),
 	)
 }

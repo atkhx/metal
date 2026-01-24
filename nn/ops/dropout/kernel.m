@@ -2,6 +2,15 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
+static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    if (w > max) {
+        w = max;
+    }
+    return MTLSizeMake(w, 1, 1);
+}
+
 @implementation DropoutKernelImpl {
     id<MTLDevice> _device;
 
@@ -54,7 +63,7 @@
     [dropout setBuffer:randomData offset:0 atIndex:2];
     [dropout setBytes:&probability length:sizeof(float) atIndex:3];
 
-    [dropout dispatchThreads:MTLSizeMake(outputData.length / sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [dropout dispatchThreads:MTLSizeMake(outputData.length / sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_dropoutPSO)];
     [dropout endEncoding];
 }
 
@@ -72,7 +81,7 @@
     [dropoutGrads setBuffer:randomData offset:0 atIndex:2];
     [dropoutGrads setBytes:&probability length:sizeof(float) atIndex:3];
 
-    [dropoutGrads dispatchThreads:MTLSizeMake(inputGrad.length / sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [dropoutGrads dispatchThreads:MTLSizeMake(inputGrad.length / sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_dropoutGradsPSO)];
     [dropoutGrads endEncoding];
 }
 

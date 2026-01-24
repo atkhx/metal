@@ -10,6 +10,9 @@ import (
 )
 
 func NewSwiGLU(featuresCount, hiddenSize int, initWeights initializer.Initializer, provideWeights func(w1, w2, w3 *num.Data)) *SwiGLU {
+	if initWeights == nil {
+		initWeights = initializer.KaimingNormalReLU
+	}
 	return &SwiGLU{featuresCount: featuresCount, hiddenSize: hiddenSize, initWeights: initWeights, provideWeights: provideWeights}
 }
 
@@ -27,23 +30,15 @@ type SwiGLU struct {
 	forUpdate []*num.Data
 }
 
-func (l *SwiGLU) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	//weightK := l.initWeights.GetNormK(inputs.Dims.Length(), inputs.Dims.Length()) // todo calc fanOut
-	//weightK := float32(1.0)
-	inputWidth := device.GetDataDims(inputs).W
+func (l *SwiGLU) Compile(device *proc.Device, input *num.Data) *num.Data {
+	inputWidth := input.Dims.W
 
-	weightK12 := l.initWeights.GetNormK(inputWidth, l.hiddenSize)
-	weightK3 := l.initWeights.GetNormK(l.hiddenSize, l.featuresCount)
+	l.weights1 = initWeights(device, l.initWeights, mtl.NewMTLSize(l.hiddenSize, inputWidth), inputWidth, l.hiddenSize)
+	l.weights2 = initWeights(device, l.initWeights, mtl.NewMTLSize(l.hiddenSize, inputWidth), inputWidth, l.hiddenSize)
+	l.weights3 = initWeights(device, l.initWeights, mtl.NewMTLSize(l.featuresCount, l.hiddenSize), l.hiddenSize, l.featuresCount)
 
-	//l.weights1 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.hiddenSize, inputWidth), weightK)
-	l.weights1 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.hiddenSize, inputWidth), weightK12)
-	//l.weights2 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.hiddenSize, inputWidth), weightK)
-	l.weights2 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.hiddenSize, inputWidth), weightK12)
-	//l.weights3 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.featuresCount, l.hiddenSize), weightK)
-	l.weights3 = device.NewDataRandNormWeighted(mtl.NewMTLSize(l.featuresCount, l.hiddenSize), weightK3)
-
-	w1Projection := device.MatrixMultiply(inputs, l.weights1, 1)
-	w2Projection := device.MatrixMultiply(inputs, l.weights2, 1)
+	w1Projection := device.MatrixMultiply(input, l.weights1, 1)
+	w2Projection := device.MatrixMultiply(input, l.weights2, 1)
 
 	w1SiLU := device.SiLu(w1Projection)
 

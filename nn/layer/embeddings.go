@@ -24,8 +24,8 @@ type Embeddings struct {
 	provideWeights func(embeddings *num.Data)
 }
 
-func (l *Embeddings) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	return device.Embeddings(inputs, l.embeddings)
+func (l *Embeddings) Compile(device *proc.Device, input *num.Data) *num.Data {
+	return device.Embeddings(input, l.embeddings)
 }
 
 func (l *Embeddings) ForUpdate() []*num.Data {

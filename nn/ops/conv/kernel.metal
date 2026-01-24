@@ -42,12 +42,12 @@ kernel void conv(
         uint imageOffset = batchIndex * imageSize + z * imageSquare;
 
         for (uint y = 0; y < wDims->height; ++y) {
-            int iy = outputPos.y - padding + y;
+            int iy = int(outputPos.y) * int(stride) - int(padding) + int(y);
             if (iy < 0 || iy >= iDims->height) {
                 continue;
             }
             for (uint x = 0; x < wDims->width; ++x) {
-                int ix = outputPos.x - padding + x;
+                int ix = int(outputPos.x) * int(stride) - int(padding) + int(x);
                 if (ix > -1 && ix < iDims->width) {
                     float weight = weightsData[filterOffset + y * wDims->width + x];
                     float input = inputData[imageOffset + iy * iDims->width + ix];
@@ -87,21 +87,27 @@ kernel void calcInputGrads(
     uint filterSize = filterSquare * imageDepth;
     uint outputSquare = oDims->width * oDims->height;
 
-    uint pad = wDims->width - 1 - padding;
-
     for (int filterIndex = 0; filterIndex < filtersCount; ++filterIndex) {
         int filterOffset = filterIndex * filterSize + imageChannel * filterSquare;
         int outputOffset = batchIndex * filtersCount * outputSquare + filterIndex * outputSquare;
 
         for (int y = 0; y < wDims->height; ++y) {
             int wy = wDims->height - 1 - y; // weight rotation
-            int oy = inputPos.y - pad + y; // padding
+            int oyNumer = int(inputPos.y) + int(padding) - y;
+            if (oyNumer % int(stride) != 0) {
+                continue;
+            }
+            int oy = oyNumer / int(stride);
             if (oy < 0 || oy >= oDims->height) {
                 continue;
             }
             for (int x = 0; x < wDims->width; ++x) {
                 int wx = wDims->width - 1 - x; // weight rotation
-                int ox = inputPos.x - pad + x; // padding
+                int oxNumer = int(inputPos.x) + int(padding) - x;
+                if (oxNumer % int(stride) != 0) {
+                    continue;
+                }
+                int ox = oxNumer / int(stride);
                 if (ox > -1 && ox < oDims->width) {
                     float weight = weightsData[filterOffset + wy * wDims->width + wx];
                     float gradient = outputGrad[outputOffset + oy * oDims->width + ox];
@@ -111,7 +117,7 @@ kernel void calcInputGrads(
         }
     }
 
-    inputGrad[inputPos.z * iDims->width * iDims->height + inputPos.y * iDims->width + inputPos.x] = s;
+    inputGrad[inputPos.z * iDims->width * iDims->height + inputPos.y * iDims->width + inputPos.x] += s;
 }
 
 kernel void calcWeightGrads(
@@ -143,13 +149,13 @@ kernel void calcWeightGrads(
         int outputOffset = (batchIndex * filtersCount + filterIndex) * outputSquare;
 
         for (int y = 0; y < oDims->height; ++y) {
-            int iy = y - padding + filterPos.y;
+            int iy = y * int(stride) - int(padding) + int(filterPos.y);
             int oy = y;
             if (iy < 0 || iy >= iDims->height) {
                 continue;
             }
             for (int x = 0; x < oDims->width; ++x) {
-                int ix = x - padding + filterPos.x;
+                int ix = x * int(stride) - int(padding) + int(filterPos.x);
                 int ox = x;
                 if (ix > -1 && ix < iDims->width) {
                     float input = inputData[inputOffset + iy*iDims->width + ix];

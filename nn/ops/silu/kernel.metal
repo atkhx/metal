@@ -19,7 +19,8 @@ kernel void siluGrads(
     const uint id [[ thread_position_in_grid ]] )
 {
     float val = inputData[id];
-    float siluDerivative = outputData[id] + (exp(-val) / pow(1.0 + exp(-val), 2.0));
+    float sigmoid = 1.0 / (1.0 + exp(-val));
+    float siluDerivative = sigmoid + val * sigmoid * (1.0 - sigmoid);
 
     inputGrad[id] += outputGrad[id] * siluDerivative;
 }

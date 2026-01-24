@@ -694,6 +694,45 @@ func TestDevice_Embeddings(t *testing.T) {
 	require.Equal(t, expectedEGrads, tEmbeddings.Grad.GetFloats())
 }
 
+func TestDevice_Embeddings_Duplicates(t *testing.T) {
+	device := NewWithSystemDefaultDevice()
+	defer device.Release()
+
+	tEmbeddings := device.NewDataWithValues(mtl.NewMTLSize(2, 2), []float32{
+		1, 2,
+		3, 4,
+	})
+
+	aData := device.NewDataWithValues(mtl.NewMTLSize(3), []float32{
+		1, 1, 1,
+	})
+
+	cData := device.Embeddings(aData, tEmbeddings)
+
+	cGradsValues := []float32{
+		1, 1,
+		1, 1,
+		1, 1,
+	}
+
+	expectedEGrads := []float32{
+		0, 0,
+		3, 3,
+	}
+
+	copy(cData.Grad.GetFloats(), cGradsValues)
+
+	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
+	defer b.Release()
+
+	cData.CalcGrad(b)
+
+	b.Commit()
+	b.WaitUntilCompleted()
+
+	require.Equal(t, expectedEGrads, tEmbeddings.Grad.GetFloats())
+}
+
 func TestDevice_Conv(t *testing.T) {
 	device := NewWithSystemDefaultDevice()
 	defer device.Release()
@@ -751,7 +790,7 @@ func TestDevice_Conv(t *testing.T) {
 	padding := 0
 	stride := 1
 
-	output := device.Conv(input, weights, biases, padding, stride)
+	output := device.Conv(input, weights, biases, 1, 1, padding, stride)
 
 	b := device.GetMTLDevice().NewCommandQueue().GetNewMTLCommandBuffer()
 	defer b.Release()

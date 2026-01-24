@@ -1,6 +1,7 @@
 package adamw
 
 import (
+	"math"
 	"testing"
 
 	"github.com/atkhx/metal/mtl"
@@ -38,4 +39,27 @@ func TestAdamW_UsesEps(t *testing.T) {
 	require.InDelta(t, float64(expectedSmall), float64(outSmall), 1e-5)
 	require.InDelta(t, float64(expectedLarge), float64(outLarge), 1e-5)
 	require.NotEqual(t, outSmall, outLarge)
+}
+
+func TestAdamW_IgnoresNaNGrad(t *testing.T) {
+	device := mtl.MustCreateSystemDefaultDevice()
+	defer device.Release()
+
+	kernel := New(device)
+
+	data := device.NewBufferWithFloats([]float32{1}, mtl.ResourceStorageModeShared)
+	grad := device.NewBufferWithFloats([]float32{float32(math.NaN())}, mtl.ResourceStorageModeShared)
+	m := device.NewBufferWithFloats([]float32{0}, mtl.ResourceStorageModeShared)
+	v := device.NewBufferWithFloats([]float32{0}, mtl.ResourceStorageModeShared)
+
+	cmd := device.NewCommandQueue().GetNewMTLCommandBuffer()
+	defer cmd.Release()
+
+	kernel.UpdateWithAdam(cmd, data, grad, m, v, 0.9, 0.999, 1, 1, 1e-9)
+	cmd.Commit()
+	cmd.WaitUntilCompleted()
+
+	require.InDelta(t, 0, float64(m.GetFloats()[0]), 1e-6)
+	require.InDelta(t, 0, float64(v.GetFloats()[0]), 1e-6)
+	require.InDelta(t, 1, float64(data.GetFloats()[0]), 1e-6)
 }

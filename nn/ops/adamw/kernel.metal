@@ -11,10 +11,15 @@ kernel void updateWithAdam(
     constant float& beta2 [[ buffer(5) ]],
     constant float& beta1powIterationLR [[ buffer(6) ]],
     constant float& beta2powIteration [[ buffer(7) ]],
+    constant float& eps [[ buffer(8) ]],
     const uint id [[ thread_position_in_grid ]] )
 {
-    mBuffer[id] = beta1*mBuffer[id] + (1 - beta1)*gradBuffer[id];
-    vBuffer[id] = beta2*vBuffer[id] + (1 - beta2)*gradBuffer[id]*gradBuffer[id];
+    float g = gradBuffer[id];
+    if (isnan(g) || isinf(g)) {
+        g = 0.0;
+    }
+    mBuffer[id] = beta1*mBuffer[id] + (1 - beta1)*g;
+    vBuffer[id] = beta2*vBuffer[id] + (1 - beta2)*g*g;
 
-    dataBuffer[id] -= mBuffer[id] * beta1powIterationLR / (sqrt(vBuffer[id] * beta2powIteration) + 0.000000001);
+    dataBuffer[id] -= mBuffer[id] * beta1powIterationLR / (sqrt(vBuffer[id] * beta2powIteration) + eps);
 }

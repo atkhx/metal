@@ -11,11 +11,11 @@ static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
     return MTLSizeMake(w, 1, 1);
 }
 
-@implementation SiluKernelImpl {
+@implementation ClampKernelImpl {
     id<MTLDevice> _device;
 
-    id<MTLComputePipelineState> _siluPSO;
-    id<MTLComputePipelineState> _siluGradsPSO;
+    id<MTLComputePipelineState> _clampPSO;
+    id<MTLComputePipelineState> _clampGradsPSO;
 
     NSError *error;
 }
@@ -43,8 +43,8 @@ static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
 
         self.library = [_device newLibraryWithSource:kernelSource options:nil error:&error];
 
-        _siluPSO = [self createPipelineStateWithFunctionName:@"silu"];
-        _siluGradsPSO = [self createPipelineStateWithFunctionName:@"siluGrads"];
+        _clampPSO      = [self createPipelineStateWithFunctionName:@"clamp"];
+        _clampGradsPSO = [self createPipelineStateWithFunctionName:@"clampGrads"];
     }
     return self;
 }
@@ -52,31 +52,39 @@ static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
 - (void) forward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
         outputData:(id<MTLBuffer>)outputData
+        minValue:(float)minValue
+        maxValue:(float)maxValue
 {
-    id<MTLComputeCommandEncoder> silu = [commandBuffer computeCommandEncoder];
+    id<MTLComputeCommandEncoder> clamp = [commandBuffer computeCommandEncoder];
 
-    [silu setComputePipelineState:_siluPSO];
-    [silu setBuffer:inputData offset:0 atIndex:0];
-    [silu setBuffer:outputData offset:0 atIndex:1];
-    [silu dispatchThreads:MTLSizeMake(outputData.length / sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_siluPSO)];
-    [silu endEncoding];
+    [clamp setComputePipelineState:_clampPSO];
+    [clamp setBuffer:inputData offset:0 atIndex:0];
+    [clamp setBuffer:outputData offset:0 atIndex:1];
+    [clamp setBytes:&minValue length:sizeof(float) atIndex:2];
+    [clamp setBytes:&maxValue length:sizeof(float) atIndex:3];
+
+    [clamp dispatchThreads:MTLSizeMake(outputData.length / sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_clampPSO)];
+    [clamp endEncoding];
 }
 
 - (void) backward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
         inputGrad:(id<MTLBuffer>)inputGrad
-        outputData:(id<MTLBuffer>)outputData
         outputGrad:(id<MTLBuffer>)outputGrad
+        minValue:(float)minValue
+        maxValue:(float)maxValue
 {
-    id<MTLComputeCommandEncoder> siluGrads = [commandBuffer computeCommandEncoder];
+    id<MTLComputeCommandEncoder> clampGrads = [commandBuffer computeCommandEncoder];
 
-    [siluGrads setComputePipelineState:_siluGradsPSO];
-    [siluGrads setBuffer:inputData offset:0 atIndex:0];
-    [siluGrads setBuffer:inputGrad offset:0 atIndex:1];
-    [siluGrads setBuffer:outputData offset:0 atIndex:2];
-    [siluGrads setBuffer:outputGrad offset:0 atIndex:3];
-    [siluGrads dispatchThreads:MTLSizeMake(inputGrad.length / sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_siluGradsPSO)];
-    [siluGrads endEncoding];
+    [clampGrads setComputePipelineState:_clampGradsPSO];
+    [clampGrads setBuffer:inputData offset:0 atIndex:0];
+    [clampGrads setBuffer:inputGrad offset:0 atIndex:1];
+    [clampGrads setBuffer:outputGrad offset:0 atIndex:2];
+    [clampGrads setBytes:&minValue length:sizeof(float) atIndex:3];
+    [clampGrads setBytes:&maxValue length:sizeof(float) atIndex:4];
+
+    [clampGrads dispatchThreads:MTLSizeMake(inputGrad.length / sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_clampGradsPSO)];
+    [clampGrads endEncoding];
 }
 
 @end

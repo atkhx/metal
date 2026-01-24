@@ -2,6 +2,15 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
+static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    if (w > max) {
+        w = max;
+    }
+    return MTLSizeMake(w, 1, 1);
+}
+
 @implementation NegLogLikelihoodKernelImpl {
     id<MTLDevice> _device;
 
@@ -55,7 +64,7 @@
     [negativeLogLikelihood setBuffer:output offset:0 atIndex:1];
     [negativeLogLikelihood setBuffer:targets offset:0 atIndex:2];
     [negativeLogLikelihood setBytes:&chunkSize length:sizeof(uint) atIndex:3];
-    [negativeLogLikelihood dispatchThreads:MTLSizeMake(rowsCount, 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [negativeLogLikelihood dispatchThreads:MTLSizeMake(rowsCount, 1, 1) threadsPerThreadgroup:threadgroupSize1D(_nllByPosPSO)];
     [negativeLogLikelihood endEncoding];
 }
 
@@ -75,7 +84,7 @@
     [computeEncoder setBuffer:softmax offset:0 atIndex:3];
     [computeEncoder setBuffer:nllGrad offset:0 atIndex:4];
     [computeEncoder setBytes:&chunkSize length:sizeof(uint) atIndex:5];
-    [computeEncoder dispatchThreads:MTLSizeMake(nllGrad.length/sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [computeEncoder dispatchThreads:MTLSizeMake(nllGrad.length/sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_nllByPosBwdPOS)];
     [computeEncoder endEncoding];
 }
 

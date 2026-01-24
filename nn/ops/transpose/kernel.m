@@ -2,6 +2,16 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
+static inline MTLSize threadgroupSize2D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    NSUInteger h = max / w;
+    if (h < 1) {
+        h = 1;
+    }
+    return MTLSizeMake(w, h, 1);
+}
+
 @implementation TransposeKernelImpl {
     id<MTLDevice> _device;
 
@@ -56,7 +66,7 @@
     [transpose setBytes:&width length:sizeof(uint) atIndex:2];
     [transpose setBytes:&height length:sizeof(uint) atIndex:3];
     [transpose setBytes:&square length:sizeof(uint) atIndex:4];
-    [transpose dispatchThreads:MTLSizeMake(width, height, depth) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [transpose dispatchThreads:MTLSizeMake(width, height, depth) threadsPerThreadgroup:threadgroupSize2D(_transposePSO)];
     [transpose endEncoding];
 }
 
@@ -76,7 +86,7 @@
     [transposeGrads setBytes:&width length:sizeof(uint) atIndex:2];
     [transposeGrads setBytes:&height length:sizeof(uint) atIndex:3];
     [transposeGrads setBytes:&square length:sizeof(uint) atIndex:4];
-    [transposeGrads dispatchThreads:MTLSizeMake(width, height, depth) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [transposeGrads dispatchThreads:MTLSizeMake(width, height, depth) threadsPerThreadgroup:threadgroupSize2D(_transposeGradsPSO)];
     [transposeGrads endEncoding];
 }
 

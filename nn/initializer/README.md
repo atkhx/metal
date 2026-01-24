@@ -21,14 +21,3 @@ Use Kaiming for ReLU/SiLU-style activations.
 
 ## Fixed
 `InitWeightFixed` returns a constant `k` and defaults to uniform sampling.
-
-## Distribution Selection
-If you pass an initializer implementing `DistributionProvider`, layers will pick
-the correct sampling function. If you pass `nil`, layers use a reasonable default:
-
-- Conv: `KaimingUniformReLU`
-- Linear: `XavierUniformLinear`
-- SwiGLU: `KaimingUniformReLU`
-- SAMultiHead: `XavierUniformLinear`
-
-You can override defaults by passing the desired initializer explicitly.

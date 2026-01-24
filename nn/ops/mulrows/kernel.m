@@ -2,6 +2,25 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
+static inline MTLSize threadgroupSize2D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    NSUInteger h = max / w;
+    if (h < 1) {
+        h = 1;
+    }
+    return MTLSizeMake(w, h, 1);
+}
+
+static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    if (w > max) {
+        w = max;
+    }
+    return MTLSizeMake(w, 1, 1);
+}
+
 @implementation MulRowsKernelImpl {
     id<MTLDevice> _device;
 
@@ -56,7 +75,7 @@
     [mulRows setBuffer:weightsData offset:0 atIndex:1];
     [mulRows setBuffer:outputData offset:0 atIndex:2];
     [mulRows setBytes:&chunkSize length:sizeof(uint) atIndex:3];
-    [mulRows dispatchThreads:MTLSizeMake(chunkSize, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [mulRows dispatchThreads:MTLSizeMake(chunkSize, rowsCount, 1) threadsPerThreadgroup:threadgroupSize2D(_mulRowsPSO)];
     [mulRows endEncoding];
 }
 
@@ -77,7 +96,7 @@
     [calcInputGrads setBuffer:weightsData offset:0 atIndex:1];
     [calcInputGrads setBuffer:outputGrad offset:0 atIndex:2];
     [calcInputGrads setBytes:&chunkSize length:sizeof(uint) atIndex:3];
-    [calcInputGrads dispatchThreads:MTLSizeMake(chunkSize, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [calcInputGrads dispatchThreads:MTLSizeMake(chunkSize, rowsCount, 1) threadsPerThreadgroup:threadgroupSize2D(_calcInputGradsPSO)];
     [calcInputGrads endEncoding];
 
     id<MTLComputeCommandEncoder> calcWeightsGrads = [commandBuffer computeCommandEncoder];
@@ -87,7 +106,7 @@
     [calcWeightsGrads setBuffer:outputGrad offset:0 atIndex:2];
     [calcWeightsGrads setBytes:&chunkSize length:sizeof(uint) atIndex:3];
     [calcWeightsGrads setBytes:&rowsCount length:sizeof(uint) atIndex:4];
-    [calcWeightsGrads dispatchThreads:MTLSizeMake(chunkSize, 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [calcWeightsGrads dispatchThreads:MTLSizeMake(chunkSize, 1, 1) threadsPerThreadgroup:threadgroupSize1D(_calcWeightsGradsPSO)];
     [calcWeightsGrads endEncoding];
 }
 

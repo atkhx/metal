@@ -1,4 +1,4 @@
-package trilmask
+package clamp
 
 /*
 #cgo CFLAGS: -x objective-c
@@ -6,44 +6,42 @@ package trilmask
 
 #include "kernel.h"
 
-void* trilMaskKernelCreate(void *device, const char *kernelSource) {
-    return [[TrilMaskKernelImpl alloc] initWithDevice:(id<MTLDevice>)device
+void* clampKernelCreate(void *device, const char *kernelSource) {
+    return [[ClampKernelImpl alloc] initWithDevice:(id<MTLDevice>)device
 		kernelSource:[NSString stringWithUTF8String:kernelSource]];
 }
 
-void trilMaskForward(
+void clampForward(
     void *kernel,
     void *commandBuffer,
     void *inputData,
     void *outputData,
-	float mask,
-	uint colsCount,
-	uint rowsCount
+	float minValue,
+	float maxValue
 ) {
-
-    [(__bridge TrilMaskKernelImpl*)kernel forward:(id<MTLCommandBuffer>)commandBuffer
+    [(__bridge ClampKernelImpl*)kernel forward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
         outputData:(id<MTLBuffer>)outputData
-		mask:(float)mask
-        colsCount:(uint)colsCount
-        rowsCount:(uint)rowsCount
+		minValue:(float)minValue
+		maxValue:(float)maxValue
 	];
 }
 
-void trilMaskBackward(
+void clampBackward(
     void *kernel,
     void *commandBuffer,
+    void *inputData,
     void *inputGrad,
     void *outputGrad,
-	uint colsCount,
-	uint rowsCount
+	float minValue,
+	float maxValue
 ) {
-
-    [(__bridge TrilMaskKernelImpl*)kernel backward:(id<MTLCommandBuffer>)commandBuffer
+    [(__bridge ClampKernelImpl*)kernel backward:(id<MTLCommandBuffer>)commandBuffer
+        inputData:(id<MTLBuffer>)inputData
         inputGrad:(id<MTLBuffer>)inputGrad
         outputGrad:(id<MTLBuffer>)outputGrad
-        colsCount:(uint)colsCount
-        rowsCount:(uint)rowsCount
+		minValue:(float)minValue
+		maxValue:(float)maxValue
 	];
 }
 
@@ -51,7 +49,6 @@ void trilMaskBackward(
 import "C"
 import (
 	_ "embed"
-	"math"
 	"unsafe"
 
 	"github.com/atkhx/metal/mtl"
@@ -65,21 +62,20 @@ func New(
 	device *mtl.Device,
 	input *num.Data,
 	output *num.Data,
-	colsCount int,
-	rowsCount int,
+	minValue float32,
+	maxValue float32,
 ) *Kernel {
 	cKernelString := C.CString(metalFunctions)
 	defer C.free(unsafe.Pointer(cKernelString))
-
 	return &Kernel{
-		kernelID: C.trilMaskKernelCreate(device.GetID(), cKernelString),
+		kernelID: C.clampKernelCreate(device.GetID(), cKernelString),
 
 		device: device,
 		input:  input,
 		output: output,
 
-		colsCount: colsCount,
-		rowsCount: rowsCount,
+		minValue: minValue,
+		maxValue: maxValue,
 	}
 }
 
@@ -90,31 +86,29 @@ type Kernel struct {
 	input  *num.Data
 	output *num.Data
 
-	colsCount int
-	rowsCount int
+	minValue float32
+	maxValue float32
 }
 
 func (k *Kernel) Forward(b *mtl.CommandBuffer) {
-	C.trilMaskForward(
+	C.clampForward(
 		k.kernelID,
 		b.GetID(),
 		k.input.Data.GetID(),
 		k.output.Data.GetID(),
-		C.float(float32(math.Inf(-1))),
-		// Use large negative finite value to avoid NaNs in downstream softmax.
-		//C.float(-1e4),
-		C.uint(k.colsCount),
-		C.uint(k.rowsCount),
+		C.float(k.minValue),
+		C.float(k.maxValue),
 	)
 }
 
 func (k *Kernel) Backward(b *mtl.CommandBuffer) {
-	C.trilMaskBackward(
+	C.clampBackward(
 		k.kernelID,
 		b.GetID(),
+		k.input.Data.GetID(),
 		k.input.Grad.GetID(),
 		k.output.Grad.GetID(),
-		C.uint(k.colsCount),
-		C.uint(k.rowsCount),
+		C.float(k.minValue),
+		C.float(k.maxValue),
 	)
 }

@@ -2,6 +2,16 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
+static inline MTLSize threadgroupSize2D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    NSUInteger h = max / w;
+    if (h < 1) {
+        h = 1;
+    }
+    return MTLSizeMake(w, h, 1);
+}
+
 @implementation EmbeddingsKernelImpl {
     id<MTLDevice> _device;
 
@@ -36,6 +46,10 @@
 
         _embeddingsPSO      = [self createPipelineStateWithFunctionName:@"embeddings"];
         _embeddingsGradsPSO = [self createPipelineStateWithFunctionName:@"embeddingsGrads"];
+
+        printf("EmbeddingsKernel PSO: execWidth=%lu maxThreads=%lu\n",
+            (unsigned long)_embeddingsPSO.threadExecutionWidth,
+            (unsigned long)_embeddingsPSO.maxTotalThreadsPerThreadgroup);
     }
     return self;
 }
@@ -57,7 +71,7 @@
     [embeddings setBuffer:tokenEmbedding offset:0 atIndex:2];
     [embeddings setBytes:&featuresCount length:sizeof(uint) atIndex:3];
     [embeddings setBytes:&contextLength length:sizeof(uint) atIndex:4];
-    [embeddings dispatchThreads:MTLSizeMake(featuresCount, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [embeddings dispatchThreads:MTLSizeMake(featuresCount, rowsCount, 1) threadsPerThreadgroup:threadgroupSize2D(_embeddingsPSO)];
     [embeddings endEncoding];
 }
 
@@ -75,7 +89,7 @@
     [embeddingsGrads setBuffer:outputGrad offset:0 atIndex:1];
     [embeddingsGrads setBuffer:tokenEmbeddingGrad offset:0 atIndex:2];
     [embeddingsGrads setBytes:&featuresCount length:sizeof(uint) atIndex:3];
-    [embeddingsGrads dispatchThreads:MTLSizeMake(featuresCount, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [embeddingsGrads dispatchThreads:MTLSizeMake(featuresCount, rowsCount, 1) threadsPerThreadgroup:threadgroupSize2D(_embeddingsGradsPSO)];
     [embeddingsGrads endEncoding];
 }
 

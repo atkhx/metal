@@ -15,6 +15,9 @@ func NewLinear(
 	withBias bool,
 	provideWeights func(weights *num.Data),
 ) *Linear {
+	if initWeights == nil {
+		initWeights = initializer.XavierNormalLinear
+	}
 	return &Linear{
 		featuresCount:  featuresCount,
 		initWeights:    initWeights,
@@ -39,15 +42,13 @@ func (l *Linear) GetWeights() *num.Data {
 	return l.weightObj
 }
 
-func (l *Linear) Compile(device *proc.Device, inputs *num.Data) *num.Data {
-	inputWidth := device.GetDataDims(inputs).W
+func (l *Linear) Compile(device *proc.Device, input *num.Data) *num.Data {
+	inputWidth := input.Dims.W
 	outputDims := mtl.NewMTLSize(l.featuresCount, inputWidth)
-	weightK := l.initWeights.GetNormK(inputWidth, l.featuresCount)
-
-	l.weightObj = device.NewDataRandNormWeighted(outputDims, weightK)
+	l.weightObj = initWeights(device, l.initWeights, outputDims, inputWidth, l.featuresCount)
 	l.forUpdate = []*num.Data{l.weightObj}
 
-	result := device.MatrixMultiply(inputs, l.weightObj, 1)
+	result := device.MatrixMultiply(input, l.weightObj, 1)
 
 	if l.withBias {
 		l.biasesObj = device.NewData(mtl.NewMTLSize(l.featuresCount))

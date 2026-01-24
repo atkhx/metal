@@ -6,7 +6,7 @@ import (
 )
 
 type Layer interface {
-	Compile(device *proc.Device, inputs *num.Data) *num.Data
+	Compile(device *proc.Device, input *num.Data) *num.Data
 }
 
 type Updatable interface {

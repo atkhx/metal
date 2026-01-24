@@ -48,6 +48,7 @@ struct Parameters {
         beta2:(float)beta2
         beta1powIterationLR:(float)beta1powIterationLR
         beta2powIteration:(float)beta2powIteration
+        eps:(float)eps
 {
     id<MTLComputeCommandEncoder> updateWithAdam = [commandBuffer computeCommandEncoder];
     [updateWithAdam setComputePipelineState:_updateWithAdamPSO];
@@ -63,6 +64,7 @@ struct Parameters {
 
     [updateWithAdam setBytes:&beta1powIterationLR length:sizeof(float) atIndex:6];
     [updateWithAdam setBytes:&beta2powIteration length:sizeof(float) atIndex:7];
+    [updateWithAdam setBytes:&eps length:sizeof(float) atIndex:8];
 
     [updateWithAdam dispatchThreads:MTLSizeMake(dataBuffer.length / sizeof(float), 1, 1)
               threadsPerThreadgroup:MTLSizeMake(256, 1, 1)];

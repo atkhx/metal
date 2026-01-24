@@ -2,6 +2,15 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
+static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    if (w > max) {
+        w = max;
+    }
+    return MTLSizeMake(w, 1, 1);
+}
+
 @implementation convKernelImpl {
     id<MTLDevice> _device;
 
@@ -74,7 +83,7 @@
     [conv setBytes:&padding length:sizeof(uint) atIndex:9];
     [conv setBytes:&stride length:sizeof(uint) atIndex:10];
 
-    [conv dispatchThreads:MTLSizeMake(oDims.width, oDims.height, oDims.depth) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [conv dispatchThreads:MTLSizeMake(oDims.width, oDims.height, oDims.depth) threadsPerThreadgroup:threadgroupSize1D(_convPSO)];
     [conv endEncoding];
 }
 
@@ -110,7 +119,7 @@
     [calcInputGrads setBytes:&padding length:sizeof(uint) atIndex:8];
     [calcInputGrads setBytes:&stride length:sizeof(uint) atIndex:9];
 
-    [calcInputGrads dispatchThreads:MTLSizeMake(iDims.width, iDims.height, iDims.depth) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [calcInputGrads dispatchThreads:MTLSizeMake(iDims.width, iDims.height, iDims.depth) threadsPerThreadgroup:threadgroupSize1D(_calcInputGradsPSO)];
     [calcInputGrads endEncoding];
 
     // Calculate weight gradients
@@ -130,7 +139,7 @@
     [calcWeightGrads setBytes:&padding length:sizeof(uint) atIndex:8];
     [calcWeightGrads setBytes:&stride length:sizeof(uint) atIndex:9];
 
-    [calcWeightGrads dispatchThreads:MTLSizeMake(wDims.width, wDims.height, wDims.depth) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [calcWeightGrads dispatchThreads:MTLSizeMake(wDims.width, wDims.height, wDims.depth) threadsPerThreadgroup:threadgroupSize1D(_calcWeightGradsPSO)];
     [calcWeightGrads endEncoding];
 
     // Calculate bias gradients

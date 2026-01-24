@@ -30,5 +30,9 @@ kernel void embeddingsGrads(
     int tokenEmbeddingY      = inputData[gid.y];
     int tokenEmbeddingOffset = (tokenEmbeddingY * featuresCount) + gid.x;
 
-    tokenEmbeddingGrad[tokenEmbeddingOffset] += outputGrad[outputOffset];
+    // tokenEmbeddingGrad[tokenEmbeddingOffset] += outputGrad[outputOffset];
+    // Use atomic to avoid possible race on update value.
+    device atomic_float* grad = (device atomic_float*)tokenEmbeddingGrad;
+    atomic_fetch_add_explicit(&grad[tokenEmbeddingOffset], outputGrad[outputOffset], memory_order_relaxed);
+
 }

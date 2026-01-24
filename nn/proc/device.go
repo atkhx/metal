@@ -10,6 +10,7 @@ import (
 	"github.com/atkhx/metal/nn/ops/adamw"
 	"github.com/atkhx/metal/nn/ops/addequal"
 	"github.com/atkhx/metal/nn/ops/addrows"
+	"github.com/atkhx/metal/nn/ops/clamp"
 	"github.com/atkhx/metal/nn/ops/conv"
 	"github.com/atkhx/metal/nn/ops/dropout"
 	"github.com/atkhx/metal/nn/ops/embeddings"
@@ -22,6 +23,7 @@ import (
 	"github.com/atkhx/metal/nn/ops/relu"
 	"github.com/atkhx/metal/nn/ops/rmsnormrows"
 	"github.com/atkhx/metal/nn/ops/ropecols"
+	"github.com/atkhx/metal/nn/ops/sanitize"
 	"github.com/atkhx/metal/nn/ops/silu"
 	"github.com/atkhx/metal/nn/ops/softmax"
 	"github.com/atkhx/metal/nn/ops/transpose"
@@ -61,15 +63,9 @@ func (d *Device) GetTrainingPipeline(lastNode *num.Data) *pipeline.TrainingPipel
 	return pipeline.NewTrainingPipeline(d.mtlDevice, lastNode)
 }
 
-func (d *Device) GetTrainingPipeline2(lastNode *num.Data) *pipeline.TrainingPipeline2 {
-	return pipeline.NewTrainingPipeline2(d.mtlDevice, lastNode)
-}
-
 func (d *Device) NewData(dims mtl.MTLSize, deps ...*num.Data) *num.Data {
 	return &num.Data{
-		//Data: d.mtlDevice.NewBufferWithFloats(make([]float32, dims.Length()), mtl.ResourceStorageModeShared),
 		Data: d.mtlDevice.NewBufferEmptyFloatsBuffer(dims.Length(), mtl.ResourceStorageModeShared),
-		//Grad: d.mtlDevice.NewBufferWithFloats(make([]float32, dims.Length()), mtl.ResourceStorageModeShared),
 		Grad: d.mtlDevice.NewBufferEmptyFloatsBuffer(dims.Length(), mtl.ResourceStorageModeShared),
 		Dims: dims,
 		Deps: deps,
@@ -79,7 +75,6 @@ func (d *Device) NewData(dims mtl.MTLSize, deps ...*num.Data) *num.Data {
 func (d *Device) NewDataWithValues(dims mtl.MTLSize, values []float32) *num.Data {
 	return &num.Data{
 		Data: d.mtlDevice.NewBufferWithFloats(values, mtl.ResourceStorageModeShared),
-		//Grad: d.mtlDevice.NewBufferWithFloats(make([]float32, dims.Length()), mtl.ResourceStorageModeShared),
 		Grad: d.mtlDevice.NewBufferEmptyFloatsBuffer(dims.Length(), mtl.ResourceStorageModeShared),
 		Dims: dims,
 	}
@@ -89,22 +84,26 @@ func (d *Device) newLinkedCopy(data *num.Data, links ...*num.Data) *num.Data {
 	return d.NewData(data.Dims, append([]*num.Data{data}, links...)...)
 }
 
-func (d *Device) NewDataRandNormWeighted(dims mtl.MTLSize, w float32) *num.Data {
+// NewDataRandUniformWeighted fills data with U(-w, w).
+func (d *Device) NewDataRandUniformWeighted(dims mtl.MTLSize, w float32) *num.Data {
 	data := make([]float32, dims.Length())
 	for i := range data {
 		data[i] = float32(rand.Float64())*2*w - w
-		//data[i] = float32(rand.NormFloat64()) * w
 	}
+	return d.NewDataWithValues(dims, data)
+}
 
+// NewDataRandNormalWeighted fills data with N(0, w^2).
+func (d *Device) NewDataRandNormalWeighted(dims mtl.MTLSize, w float32) *num.Data {
+	data := make([]float32, dims.Length())
+	for i := range data {
+		data[i] = float32(rand.NormFloat64()) * w
+	}
 	return d.NewDataWithValues(dims, data)
 }
 
 func (d *Device) NewTokenEmbeddingTable(featuresCount, alphabetSize int, w float32) *num.Data {
-	return d.NewDataRandNormWeighted(mtl.NewMTLSize(featuresCount, alphabetSize), w)
-}
-
-func (d *Device) GetDataDims(data *num.Data) mtl.MTLSize {
-	return data.Dims
+	return d.NewDataRandUniformWeighted(mtl.NewMTLSize(featuresCount, alphabetSize), w)
 }
 
 type Kernel interface {
@@ -185,6 +184,18 @@ func (d *Device) RopeCols(input *num.Data, featuresCount, headSize, contextLengt
 func (d *Device) Relu(input *num.Data) *num.Data {
 	output := d.newLinkedCopy(input)
 	kernel := relu.New(d.mtlDevice, input, output)
+	return d.assocKernel(output, kernel)
+}
+
+func (d *Device) Clamp(input *num.Data, min, max float32) *num.Data {
+	output := d.newLinkedCopy(input)
+	kernel := clamp.New(d.mtlDevice, input, output, min, max)
+	return d.assocKernel(output, kernel)
+}
+
+func (d *Device) Sanitize(input *num.Data) *num.Data {
+	output := d.newLinkedCopy(input)
+	kernel := sanitize.New(d.mtlDevice, input, output)
 	return d.assocKernel(output, kernel)
 }
 
@@ -271,7 +282,9 @@ func (d *Device) CrossEntropyPos(input, targets *num.Data) *num.Data {
 		panic("target depth must be equal input depth")
 	}
 
-	inputSoftmax := d.Softmax(input)
+	// Clamp and sanitize logits to keep softmax numerically stable for large values.
+	//inputSoftmax := d.Softmax(d.Sanitize(d.Clamp(input, -20, 20)))
+	inputSoftmax := d.Softmax(d.Sanitize(input))
 	output := d.NewData(targets.Dims, inputSoftmax)
 	kernel := nllpos.New(d.mtlDevice, inputSoftmax, output, targets, input.Dims.W)
 	return d.assocKernel(output, kernel)
@@ -364,6 +377,7 @@ func (d *Device) GetOptimizerAdam(iterations int, beta1, beta2, learningRate, ep
 					beta2,
 					beta1powIterationLR,
 					beta2powIteration,
+					eps,
 				)
 			}
 		}

@@ -10,7 +10,8 @@ kernel void dropout(
     const uint id [[ thread_position_in_grid ]] )
 {
     if (randomData[id] > probability) {
-        outputData[id] = inputData[id];
+        float scale = 1.0 / (1.0 - probability);
+        outputData[id] = inputData[id] * scale;
     } else {
         outputData[id] = 0.0;
     }
@@ -24,6 +25,7 @@ kernel void dropoutGrads(
     const uint id [[ thread_position_in_grid ]] )
 {
     if (randomData[id] > probability) {
-        inputGrad[id] += outputGrad[id];
+        float scale = 1.0 / (1.0 - probability);
+        inputGrad[id] += outputGrad[id] * scale;
     }
 }

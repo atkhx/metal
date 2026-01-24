@@ -2,6 +2,25 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
+static inline MTLSize threadgroupSize2D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    NSUInteger h = max / w;
+    if (h < 1) {
+        h = 1;
+    }
+    return MTLSizeMake(w, h, 1);
+}
+
+static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    if (w > max) {
+        w = max;
+    }
+    return MTLSizeMake(w, 1, 1);
+}
+
 @implementation RmsNormRowsKernelImpl {
     id<MTLDevice> _device;
 
@@ -59,7 +78,7 @@
     [calcRMSByRows setBuffer:inputData offset:0 atIndex:0];
     [calcRMSByRows setBuffer:rmsData offset:0 atIndex:1];
     [calcRMSByRows setBytes:&chunkSize length:sizeof(uint) atIndex:2];
-    [calcRMSByRows dispatchThreads:MTLSizeMake(1, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [calcRMSByRows dispatchThreads:MTLSizeMake(1, rowsCount, 1) threadsPerThreadgroup:threadgroupSize1D(_calcRMSByRowsPSO)];
     [calcRMSByRows endEncoding];
 
     id<MTLComputeCommandEncoder> normByRMS = [commandBuffer computeCommandEncoder];
@@ -68,7 +87,7 @@
     [normByRMS setBuffer:outputData offset:0 atIndex:1];
     [normByRMS setBuffer:rmsData offset:0 atIndex:2];
     [normByRMS setBytes:&chunkSize length:sizeof(uint) atIndex:3];
-    [normByRMS dispatchThreads:MTLSizeMake(chunkSize, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [normByRMS dispatchThreads:MTLSizeMake(chunkSize, rowsCount, 1) threadsPerThreadgroup:threadgroupSize2D(_normByRMSPSO)];
     [normByRMS endEncoding];
 }
 
@@ -90,7 +109,7 @@
     [calcRMSGrads setBuffer:outputData offset:0 atIndex:2];
     [calcRMSGrads setBuffer:outputGrad offset:0 atIndex:3];
     [calcRMSGrads setBytes:&chunkSize length:sizeof(uint) atIndex:4];
-    [calcRMSGrads dispatchThreads:MTLSizeMake(rowsCount, 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [calcRMSGrads dispatchThreads:MTLSizeMake(rowsCount, 1, 1) threadsPerThreadgroup:threadgroupSize1D(_calcRMSGradsPSO)];
     [calcRMSGrads endEncoding];
 
     id<MTLComputeCommandEncoder> calcInputGrads = [commandBuffer computeCommandEncoder];
@@ -101,7 +120,7 @@
     [calcInputGrads setBuffer:rmsData offset:0 atIndex:3];
     [calcInputGrads setBuffer:rmsGrad offset:0 atIndex:4];
     [calcInputGrads setBytes:&chunkSize length:sizeof(uint) atIndex:5];
-    [calcInputGrads dispatchThreads:MTLSizeMake(inputGrad.length/sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [calcInputGrads dispatchThreads:MTLSizeMake(inputGrad.length/sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_calcInputGradsPSO)];
     [calcInputGrads endEncoding];
 }
 

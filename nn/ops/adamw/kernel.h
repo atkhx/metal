@@ -16,7 +16,8 @@
         beta1:(float)beta1
         beta2:(float)beta2
         beta1powIterationLR:(float)beta1powIterationLR
-        beta2powIteration:(float)beta2powIteration;
+        beta2powIteration:(float)beta2powIteration
+        eps:(float)eps;
 
 @end
 

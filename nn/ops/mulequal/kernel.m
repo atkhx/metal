@@ -2,6 +2,15 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
+static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    if (w > max) {
+        w = max;
+    }
+    return MTLSizeMake(w, 1, 1);
+}
+
 @implementation MulEqualKernelImpl {
     id<MTLDevice> _device;
 
@@ -50,7 +59,7 @@
     [mulEqual setBuffer:inputData offset:0 atIndex:0];
     [mulEqual setBuffer:weightsData offset:0 atIndex:1];
     [mulEqual setBuffer:outputData offset:0 atIndex:2];
-    [mulEqual dispatchThreads:MTLSizeMake(inputData.length/sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [mulEqual dispatchThreads:MTLSizeMake(inputData.length/sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_mulEqualPSO)];
     [mulEqual endEncoding];
 }
 
@@ -69,7 +78,7 @@
     [calcGrads setBuffer:weightsData offset:0 atIndex:2];
     [calcGrads setBuffer:weightsGrad offset:0 atIndex:3];
     [calcGrads setBuffer:outputGrad offset:0 atIndex:4];
-    [calcGrads dispatchThreads:MTLSizeMake(inputData.length/sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [calcGrads dispatchThreads:MTLSizeMake(inputData.length/sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_calcGradsPSO)];
     [calcGrads endEncoding];
 }
 
