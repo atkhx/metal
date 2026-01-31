@@ -2,6 +2,15 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
+static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    if (w > max) {
+        w = max;
+    }
+    return MTLSizeMake(w, 1, 1);
+}
+
 @implementation MeanKernelImpl {
     id<MTLDevice> _device;
 
@@ -52,7 +61,7 @@
     [meanByRows setBuffer:inputData offset:0 atIndex:0];
     [meanByRows setBuffer:outputData offset:0 atIndex:1];
     [meanByRows setBytes:&chunkSize length:sizeof(uint) atIndex:2];
-    [meanByRows dispatchThreads:MTLSizeMake(1, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [meanByRows dispatchThreads:MTLSizeMake(1, rowsCount, 1) threadsPerThreadgroup:threadgroupSize1D(_meanByRowsPSO)];
     [meanByRows endEncoding];
 }
 
@@ -66,7 +75,7 @@
     [meanGrads setBuffer:inputGrad offset:0 atIndex:0];
     [meanGrads setBuffer:outputGrad offset:0 atIndex:1];
     [meanGrads setBytes:&chunkSize length:sizeof(uint) atIndex:2];
-    [meanGrads dispatchThreads:MTLSizeMake(inputGrad.length/sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [meanGrads dispatchThreads:MTLSizeMake(inputGrad.length/sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_meanByRowsGradsPSO)];
     [meanGrads endEncoding];
 }
 

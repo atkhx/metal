@@ -2,6 +2,16 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
+static inline MTLSize threadgroupSize2D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    NSUInteger h = max / w;
+    if (h < 1) {
+        h = 1;
+    }
+    return MTLSizeMake(w, h, 1);
+}
+
 @implementation ropeColsKernelImpl {
     id<MTLDevice> _device;
 
@@ -56,7 +66,7 @@
     [ropeCols setBytes:&featuresCount length:sizeof(uint) atIndex:2];
     [ropeCols setBytes:&headSize length:sizeof(uint) atIndex:3];
     [ropeCols setBytes:&contextLength length:sizeof(uint) atIndex:4];
-    [ropeCols dispatchThreads:MTLSizeMake(contextLength, featuresCount/2, batchSize) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [ropeCols dispatchThreads:MTLSizeMake(contextLength, featuresCount/2, batchSize) threadsPerThreadgroup:threadgroupSize2D(_ropeColsPSO)];
     [ropeCols endEncoding];
 }
 
@@ -76,7 +86,7 @@
     [ropeColsGrads setBytes:&featuresCount length:sizeof(uint) atIndex:2];
     [ropeColsGrads setBytes:&headSize length:sizeof(uint) atIndex:3];
     [ropeColsGrads setBytes:&contextLength length:sizeof(uint) atIndex:4];
-    [ropeColsGrads dispatchThreads:MTLSizeMake(contextLength, featuresCount/2, batchSize) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [ropeColsGrads dispatchThreads:MTLSizeMake(contextLength, featuresCount/2, batchSize) threadsPerThreadgroup:threadgroupSize2D(_ropeColsGradsPSO)];
     [ropeColsGrads endEncoding];
 }
 

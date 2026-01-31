@@ -88,7 +88,7 @@ func NewTransformer(
 		layers = append(layers,
 			layer.NewRMSLNorm(),
 			layer.NewMulRows(embeddingFeatures, initWeightRMSMul, nil),
-			layer.NewLinearWithWeights(embeddingsOut),
+			layer.NewLinearWithImmutableWeights(embeddingsOut),
 		)
 
 		layers = append(layers, layer.NewReshape(mtl.NewMTLSize(alphabetSize, miniBatchSize*contextLength)))

@@ -11,6 +11,18 @@ func NewReLu() *Activation {
 	}}
 }
 
+func NewGeLu() *Activation {
+	return &Activation{activation: func(device *proc.Device, input *num.Data) *num.Data {
+		return device.GeLu(input)
+	}}
+}
+
+func NewGeLuNew() *Activation {
+	return &Activation{activation: func(device *proc.Device, input *num.Data) *num.Data {
+		return device.GeLuNew(input)
+	}}
+}
+
 type Activation struct {
 	activation func(device *proc.Device, input *num.Data) *num.Data
 }

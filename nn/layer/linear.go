@@ -13,14 +13,14 @@ func NewLinear(
 	featuresCount int,
 	initWeights initializer.Initializer,
 	withBias bool,
-	provideWeights func(weights *num.Data),
+	provideWeights func(weights, bias *num.Data),
 ) *Linear {
 	if initWeights == nil {
 		initWeights = initializer.XavierNormalLinear
 	}
 	return &Linear{
 		featuresCount:  featuresCount,
-		initWeights:    initWeights,
+		initWeights:    initializer.DefaultOnNil(initWeights, initializer.XavierNormalLinear),
 		withBias:       withBias,
 		provideWeights: provideWeights,
 	}
@@ -28,7 +28,7 @@ func NewLinear(
 
 type Linear struct {
 	initWeights    initializer.Initializer
-	provideWeights func(weights *num.Data)
+	provideWeights func(weights, bias *num.Data)
 	featuresCount  int
 
 	withBias  bool
@@ -93,5 +93,7 @@ func (l *Linear) UnmarshalJSON(bytes []byte) error {
 }
 
 func (l *Linear) LoadFromProvider() {
-	l.provideWeights(l.weightObj)
+	if l.provideWeights != nil {
+		l.provideWeights(l.weightObj, l.biasesObj)
+	}
 }

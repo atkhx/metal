@@ -2,6 +2,25 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
+static inline MTLSize threadgroupSize2D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    NSUInteger h = max / w;
+    if (h < 1) {
+        h = 1;
+    }
+    return MTLSizeMake(w, h, 1);
+}
+
+static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    if (w > max) {
+        w = max;
+    }
+    return MTLSizeMake(w, 1, 1);
+}
+
 @implementation MulColsKernelImpl {
     id<MTLDevice> _device;
 
@@ -58,7 +77,7 @@
     [mulCols setBuffer:outputData offset:0 atIndex:2];
     [mulCols setBytes:&rowWidth length:sizeof(uint) atIndex:3];
     [mulCols setBytes:&colHeight length:sizeof(uint) atIndex:4];
-    [mulCols dispatchThreads:MTLSizeMake(rowWidth, colHeight, depth) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [mulCols dispatchThreads:MTLSizeMake(rowWidth, colHeight, depth) threadsPerThreadgroup:threadgroupSize2D(_mulColsPSO)];
     [mulCols endEncoding];
 }
 
@@ -81,7 +100,7 @@
     [calcInputGrads setBuffer:outputGrad offset:0 atIndex:2];
     [calcInputGrads setBytes:&rowWidth length:sizeof(uint) atIndex:3];
     [calcInputGrads setBytes:&colHeight length:sizeof(uint) atIndex:4];
-    [calcInputGrads dispatchThreads:MTLSizeMake(colHeight, colHeight, depth) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [calcInputGrads dispatchThreads:MTLSizeMake(colHeight, colHeight, depth) threadsPerThreadgroup:threadgroupSize2D(_calcInputGradsPSO)];
     [calcInputGrads endEncoding];
 
     id<MTLComputeCommandEncoder> calcWeightsGrads = [commandBuffer computeCommandEncoder];
@@ -92,7 +111,7 @@
     [calcWeightsGrads setBytes:&rowWidth length:sizeof(uint) atIndex:3]; // colsCount
     [calcWeightsGrads setBytes:&colHeight length:sizeof(uint) atIndex:4]; // rowsCount
     [calcWeightsGrads setBytes:&depth length:sizeof(uint) atIndex:5]; // rowsCount
-    [calcWeightsGrads dispatchThreads:MTLSizeMake(colHeight, 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [calcWeightsGrads dispatchThreads:MTLSizeMake(colHeight, 1, 1) threadsPerThreadgroup:threadgroupSize1D(_calcWeightsGradsPSO)];
     [calcWeightsGrads endEncoding];
 }
 

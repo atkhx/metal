@@ -2,6 +2,15 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
+static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    if (w > max) {
+        w = max;
+    }
+    return MTLSizeMake(w, 1, 1);
+}
+
 @implementation ReluKernelImpl {
     id<MTLDevice> _device;
 
@@ -49,7 +58,7 @@
     [relu setComputePipelineState:_reluPSO];
     [relu setBuffer:inputData offset:0 atIndex:0];
     [relu setBuffer:outputData offset:0 atIndex:1];
-    [relu dispatchThreads:MTLSizeMake(outputData.length / sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [relu dispatchThreads:MTLSizeMake(outputData.length / sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_reluPSO)];
     [relu endEncoding];
 }
 
@@ -64,7 +73,7 @@
     [reluGrads setBuffer:inputData offset:0 atIndex:0];
     [reluGrads setBuffer:inputGrad offset:0 atIndex:1];
     [reluGrads setBuffer:outputGrad offset:0 atIndex:2];
-    [reluGrads dispatchThreads:MTLSizeMake(inputGrad.length / sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [reluGrads dispatchThreads:MTLSizeMake(inputGrad.length / sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_reluGradsPSO)];
     [reluGrads endEncoding];
 }
 

@@ -2,6 +2,16 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
+static inline MTLSize threadgroupSize2D(id<MTLComputePipelineState> pso) {
+    NSUInteger w = pso.threadExecutionWidth;
+    NSUInteger max = pso.maxTotalThreadsPerThreadgroup;
+    NSUInteger h = max / w;
+    if (h < 1) {
+        h = 1;
+    }
+    return MTLSizeMake(w, h, 1);
+}
+
 @implementation TrilMaskKernelImpl {
     id<MTLDevice> _device;
 
@@ -55,7 +65,7 @@
     [trilMask setBytes:&mask length:sizeof(float) atIndex:2];
     [trilMask setBytes:&colsCount length:sizeof(uint) atIndex:3];
     [trilMask setBytes:&rowsCount length:sizeof(uint) atIndex:4];
-    [trilMask dispatchThreads:MTLSizeMake(colsCount, rowsCount, depth) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [trilMask dispatchThreads:MTLSizeMake(colsCount, rowsCount, depth) threadsPerThreadgroup:threadgroupSize2D(_trilMaskPSO)];
     [trilMask endEncoding];
 }
 
@@ -73,7 +83,7 @@
     [trilMaskGrads setBuffer:outputGrad offset:0 atIndex:1];
     [trilMaskGrads setBytes:&colsCount length:sizeof(uint) atIndex:2];
     [trilMaskGrads setBytes:&rowsCount length:sizeof(uint) atIndex:3];
-    [trilMaskGrads dispatchThreads:MTLSizeMake(colsCount, rowsCount, depth) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [trilMaskGrads dispatchThreads:MTLSizeMake(colsCount, rowsCount, depth) threadsPerThreadgroup:threadgroupSize2D(_trilMaskBwdPSO)];
     [trilMaskGrads endEncoding];
 }
 
