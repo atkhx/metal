@@ -1,4 +1,4 @@
-package gpt2
+package gpt2mini
 
 type Config struct {
 	ContextLength   int

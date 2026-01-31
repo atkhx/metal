@@ -8,19 +8,19 @@ import (
 	"math/rand"
 	"os"
 
-	"github.com/atkhx/metal/nn/model/gpt2mini"
+	"github.com/atkhx/metal/nn/model/gpt2medium"
 	"github.com/atkhx/metal/nn/model/safetensors"
 	tokenizergpt2bpe "github.com/atkhx/metal/nn/model/tokenizer_gpt2_bpe"
 	"github.com/atkhx/metal/nn/proc"
 )
 
 var (
-	weightsFile = flag.String("weights", "data/gpt2mini/model.safetensors", "weights file")
-	configPath  = flag.String("config", "data/gpt2mini/gpt2-mini/config.json", "gpt2 config.json")
-	vocabPath   = flag.String("vocab", "data/gpt2mini/gpt2-mini/vocab.json", "vocab.json for decode")
-	mergesPath  = flag.String("merges", "data/gpt2mini/gpt2-mini/merges.txt", "merges.txt for encode")
+	weightsFile = flag.String("weights", "data/gpt2medium/model.safetensors", "weights file")
+	configPath  = flag.String("config", "data/gpt2medium/gpt2-medium/config.json", "gpt2 config.json")
+	vocabPath   = flag.String("vocab", "data/gpt2medium/gpt2-medium/vocab.json", "vocab.json for decode")
+	mergesPath  = flag.String("merges", "data/gpt2medium/gpt2-medium/merges.txt", "merges.txt for encode")
 	prompt      = flag.String("prompt", "", "prompt text (overrides -tokens)")
-	steps       = flag.Int("steps", 100, "generation steps")
+	steps       = flag.Int("steps", 1024, "generation steps")
 )
 
 func main() {
@@ -29,10 +29,10 @@ func main() {
 	device := proc.NewWithSystemDefaultDevice()
 	defer device.Release()
 
-	cfg, err := gpt2mini.LoadHFConfig(*configPath, 1, 0)
+	cfg, err := gpt2medium.LoadHFConfig(*configPath, 1, 0)
 	if err != nil {
 		log.Printf("config load failed (%v), using defaults", err)
-		cfg = gpt2mini.GetDefaultConfig()
+		cfg = gpt2medium.GetDefaultConfig()
 	}
 
 	tokenizer, err := tokenizergpt2bpe.NewFromFiles(*vocabPath, *mergesPath)
@@ -56,11 +56,11 @@ func main() {
 		log.Fatalf("create reader: %v", err)
 	}
 
-	cfg.WeightsProvider = &gpt2mini.WeightsProvider{
-		WeightsSTReader: gpt2mini.WeightsSTReader{WeightsReader: weightsReader},
+	cfg.WeightsProvider = &gpt2medium.WeightsProvider{
+		WeightsSTReader: gpt2medium.WeightsSTReader{WeightsReader: weightsReader},
 	}
 
-	m := gpt2mini.NewModel(cfg, device, nil)
+	m := gpt2medium.NewModel(cfg, device, nil)
 	m.Compile()
 	m.LoadFromProvider()
 

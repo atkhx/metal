@@ -1,4 +1,4 @@
-package gpt2
+package gpt2mini
 
 import (
 	"fmt"
@@ -28,12 +28,16 @@ func LoadHFConfig(path string, batchSize int, dropout float32) (Config, error) {
 		return Config{}, fmt.Errorf("invalid config: %+v", cfg)
 	}
 	headSize := cfg.NEmb / cfg.NHead
+	hiddenDim := cfg.NInner
+	if hiddenDim == 0 {
+		hiddenDim = cfg.NEmb * 4
+	}
 	return Config{
 		ContextLength: cfg.NPositions,
 		FeaturesCount: cfg.NEmb,
 		HeadsCount:    cfg.NHead,
 		HeadSize:      headSize,
-		HiddenDim:     cfg.NInner,
+		HiddenDim:     hiddenDim,
 		BlocksCount:   cfg.NLayer,
 		VocabSize:     cfg.VocabSize,
 		BatchSize:     batchSize,

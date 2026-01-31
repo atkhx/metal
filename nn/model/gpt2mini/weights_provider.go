@@ -1,4 +1,4 @@
-package gpt2
+package gpt2mini
 
 import "github.com/atkhx/metal/nn/num"
 
