@@ -32,3 +32,8 @@ gpt2-mini-prepare:
 	fetch "$(HF_GPT2_MINI_BASE)/special_tokens_map.json" "$(GPT2_MINI_DIR)/special_tokens_map.json"; \
 	fetch "$(HF_GPT2_MINI_BASE)/generation_config.json" "$(GPT2_MINI_DIR)/generation_config.json"; \
 	fetch "$(HF_GPT2_MINI_BASE)/model.safetensors" "$(GPT2_MINI_WEIGHTS)"
+
+.PHONY: gpt2-mini-test
+
+gpt2-mini-test:
+	go run ./experiments/gpt2mini -prompt 'Hello, Im a language model,'
