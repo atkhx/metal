@@ -51,7 +51,6 @@ void trilMaskBackward(
 import "C"
 import (
 	_ "embed"
-	"math"
 	"unsafe"
 
 	"github.com/atkhx/metal/mtl"
@@ -100,9 +99,9 @@ func (k *Kernel) Forward(b *mtl.CommandBuffer) {
 		b.GetID(),
 		k.input.Data.GetID(),
 		k.output.Data.GetID(),
-		C.float(float32(math.Inf(-1))),
+		//C.float(float32(math.Inf(-1))),
 		// Use large negative finite value to avoid NaNs in downstream softmax.
-		//C.float(-1e4),
+		C.float(-1e4),
 		C.uint(k.colsCount),
 		C.uint(k.rowsCount),
 	)

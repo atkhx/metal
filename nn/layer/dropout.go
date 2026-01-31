@@ -14,5 +14,8 @@ type Dropout struct {
 }
 
 func (l *Dropout) Compile(device *proc.Device, input *num.Data) *num.Data {
-	return device.Dropout(input, l.dropoutProb)
+	if l.dropoutProb > 0 {
+		return device.Dropout(input, l.dropoutProb)
+	}
+	return input
 }

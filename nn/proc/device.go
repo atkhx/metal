@@ -8,12 +8,15 @@ import (
 	"github.com/atkhx/metal/mtl"
 	"github.com/atkhx/metal/nn/num"
 	"github.com/atkhx/metal/nn/ops/adamw"
+	"github.com/atkhx/metal/nn/ops/addcols"
 	"github.com/atkhx/metal/nn/ops/addequal"
 	"github.com/atkhx/metal/nn/ops/addrows"
-	"github.com/atkhx/metal/nn/ops/clamp"
 	"github.com/atkhx/metal/nn/ops/conv"
 	"github.com/atkhx/metal/nn/ops/dropout"
 	"github.com/atkhx/metal/nn/ops/embeddings"
+	"github.com/atkhx/metal/nn/ops/gelu"
+	"github.com/atkhx/metal/nn/ops/gelunew"
+	"github.com/atkhx/metal/nn/ops/layernormrows"
 	"github.com/atkhx/metal/nn/ops/matmul"
 	"github.com/atkhx/metal/nn/ops/mean"
 	"github.com/atkhx/metal/nn/ops/mulcols"
@@ -148,6 +151,12 @@ func (d *Device) AddRow(input, weights *num.Data, width int) *num.Data {
 	return d.assocKernel(output, kernel)
 }
 
+func (d *Device) AddCol(input, weights *num.Data, width, height int) *num.Data {
+	output := d.newLinkedCopy(input, weights)
+	kernel := addcols.New(d.mtlDevice, input, weights, output, width, height)
+	return d.assocKernel(output, kernel)
+}
+
 func (d *Device) MulCol(input, weights *num.Data, width, height int) *num.Data {
 	output := d.newLinkedCopy(input, weights)
 	kernel := mulcols.New(d.mtlDevice, input, weights, output, width, height)
@@ -175,6 +184,12 @@ func (d *Device) RMSNorm(input *num.Data, width int) *num.Data {
 	return d.assocKernel(output, kernel)
 }
 
+func (d *Device) LayerNorm(input *num.Data, width int, eps float32) *num.Data {
+	output := d.newLinkedCopy(input)
+	kernel := layernormrows.New(d.mtlDevice, input, output, width, eps)
+	return d.assocKernel(output, kernel)
+}
+
 func (d *Device) RopeCols(input *num.Data, featuresCount, headSize, contextLength int) *num.Data {
 	output := d.newLinkedCopy(input)
 	kernel := ropecols.New(d.mtlDevice, input, output, featuresCount, headSize, contextLength)
@@ -187,12 +202,6 @@ func (d *Device) Relu(input *num.Data) *num.Data {
 	return d.assocKernel(output, kernel)
 }
 
-func (d *Device) Clamp(input *num.Data, min, max float32) *num.Data {
-	output := d.newLinkedCopy(input)
-	kernel := clamp.New(d.mtlDevice, input, output, min, max)
-	return d.assocKernel(output, kernel)
-}
-
 func (d *Device) Sanitize(input *num.Data) *num.Data {
 	output := d.newLinkedCopy(input)
 	kernel := sanitize.New(d.mtlDevice, input, output)
@@ -202,6 +211,18 @@ func (d *Device) Sanitize(input *num.Data) *num.Data {
 func (d *Device) SiLu(input *num.Data) *num.Data {
 	output := d.newLinkedCopy(input)
 	kernel := silu.New(d.mtlDevice, input, output)
+	return d.assocKernel(output, kernel)
+}
+
+func (d *Device) GeLu(input *num.Data) *num.Data {
+	output := d.newLinkedCopy(input)
+	kernel := gelu.New(d.mtlDevice, input, output)
+	return d.assocKernel(output, kernel)
+}
+
+func (d *Device) GeLuNew(input *num.Data) *num.Data {
+	output := d.newLinkedCopy(input)
+	kernel := gelunew.New(d.mtlDevice, input, output)
 	return d.assocKernel(output, kernel)
 }
 
@@ -256,11 +277,16 @@ func (d *Device) Transpose(input *num.Data) *num.Data {
 
 func (d *Device) Embeddings(input *num.Data, tEmbeddings *num.Data) *num.Data {
 	featuresCount := tEmbeddings.Dims.W
-
 	contextSize := input.Dims.W
-	tokensCount := input.Dims.H
+	batchSize := input.Dims.H
 
-	output := d.NewData(mtl.NewMTLSize(featuresCount, contextSize, tokensCount), tEmbeddings)
+	fmt.Println("Embeddings input.Dims", input.Dims)
+	fmt.Println("Embeddings tEmbeddings.Dims", tEmbeddings.Dims)
+	fmt.Println("featuresCount", featuresCount)
+	fmt.Println("contextSize", contextSize)
+	fmt.Println()
+
+	output := d.NewData(mtl.NewMTLSize(featuresCount, contextSize, batchSize), tEmbeddings)
 	kernel := embeddings.New(d.mtlDevice, input, output, tEmbeddings, featuresCount, contextSize)
 	return d.assocKernel(output, kernel)
 }
@@ -282,8 +308,6 @@ func (d *Device) CrossEntropyPos(input, targets *num.Data) *num.Data {
 		panic("target depth must be equal input depth")
 	}
 
-	// Clamp and sanitize logits to keep softmax numerically stable for large values.
-	//inputSoftmax := d.Softmax(d.Sanitize(d.Clamp(input, -20, 20)))
 	inputSoftmax := d.Softmax(d.Sanitize(input))
 	output := d.NewData(targets.Dims, inputSoftmax)
 	kernel := nllpos.New(d.mtlDevice, inputSoftmax, output, targets, input.Dims.W)
@@ -321,7 +345,7 @@ func (d *Device) GetConvSize(imageSize, filterSize, filtersCount, padding, strid
 }
 
 func (d *Device) Conv(input, weights, biases *num.Data, filtersCount, batchSize, padding, stride int) *num.Data {
-	convSize := d.GetConvSize(input.Dims.W, weights.Dims.W, filtersCount, padding, stride)
+	convSize := d.GetConvSize(input.Dims.W, weights.Dims.W, filtersCount*batchSize, padding, stride)
 	output := d.NewData(convSize, input, weights, biases)
 	kernel := conv.New(d.mtlDevice, input, weights, biases, output, filtersCount, batchSize, padding, stride)
 	return d.assocKernel(output, kernel)

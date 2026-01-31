@@ -11,6 +11,7 @@
         meanData:(id<MTLBuffer>)meanData
         invStdData:(id<MTLBuffer>)invStdData
         width:(uint)width
+        eps:(float)eps
         rowsCount:(uint)rowsCount;
 
 - (void) backward:(id<MTLCommandBuffer>)commandBuffer

@@ -69,6 +69,7 @@ static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
         meanData:(id<MTLBuffer>)meanData
         invStdData:(id<MTLBuffer>)invStdData
         width:(uint)width
+        eps:(float)eps
         rowsCount:(uint)rowsCount
 {
     id<MTLComputeCommandEncoder> calcMeanInvStd = [commandBuffer computeCommandEncoder];
@@ -77,6 +78,7 @@ static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
     [calcMeanInvStd setBuffer:meanData offset:0 atIndex:1];
     [calcMeanInvStd setBuffer:invStdData offset:0 atIndex:2];
     [calcMeanInvStd setBytes:&width length:sizeof(uint) atIndex:3];
+    [calcMeanInvStd setBytes:&eps length:sizeof(float) atIndex:4];
     [calcMeanInvStd dispatchThreads:MTLSizeMake(rowsCount, 1, 1) threadsPerThreadgroup:threadgroupSize1D(_calcMeanInvStdPSO)];
     [calcMeanInvStd endEncoding];
 

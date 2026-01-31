@@ -5,7 +5,7 @@ import (
 	"github.com/atkhx/metal/nn/proc"
 )
 
-func NewLinearWithWeights(
+func NewLinearWithImmutableWeights(
 	weightObj *num.Data,
 ) *LinearWithWeights {
 	return &LinearWithWeights{

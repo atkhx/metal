@@ -1,50 +1,25 @@
-package model
+package gpt2
 
 import (
 	"github.com/atkhx/metal/mtl"
 	"github.com/atkhx/metal/nn/initializer"
 	"github.com/atkhx/metal/nn/layer"
+	"github.com/atkhx/metal/nn/model"
 	"github.com/atkhx/metal/nn/proc"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
-func GetDefaultGPT2Config() GPT2Config {
-	return GPT2Config{
-		ContextLength: 512,
-		FeaturesCount: 512,
-		HeadsCount:    8,
-		HeadSize:      64,
-		HiddenDim:     2048,
-		BlocksCount:   4,
-		VocabSize:     50257,
-		BatchSize:     1,
-		DropoutProb:   0,
-		LayerNormEps:  1e-5,
-	}
-}
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-type GPT2Config struct {
-	ContextLength int
-	FeaturesCount int
-	HeadsCount    int
-	HeadSize      int
-	HiddenDim     int
-	BlocksCount   int
-	VocabSize     int
-	BatchSize     int
-	DropoutProb   float32
-	LayerNormEps  float32
-	Weights       *GPT2Weights
-}
-
-func NewGPT2(cfg GPT2Config, device *proc.Device, optimizer proc.Optimizer) *Model {
+func NewModel(cfg Config, device *proc.Device, optimizer proc.Optimizer) *model.Model {
 	inDims := mtl.MTLSize{
 		W: cfg.ContextLength,
 		H: cfg.BatchSize,
 		D: 1,
 	}
 
-	weights := cfg.Weights
-	provider := GPT2WeightsProvider{GPT2Weights: *weights}
+	provider := cfg.WeightsProvider
 
 	embeddingsIn := device.NewTokenEmbeddingTable(
 		cfg.FeaturesCount,
@@ -71,15 +46,15 @@ func NewGPT2(cfg GPT2Config, device *proc.Device, optimizer proc.Optimizer) *Mod
 					initializer.XavierNormalLinear,
 					provider.ProvideBlockQKV(block),
 				),
-				layer.NewLinear(cfg.FeaturesCount, initializer.XavierNormalLinear, true, provider.ProvideBlockProj(block)),
+				layer.NewLinear(cfg.FeaturesCount, initializer.XavierNormalLinear, true, provider.ProvideBlockAttnProj(block)),
 				layer.NewDropout(cfg.DropoutProb),
 			}),
 			layer.NewResidual(layer.Layers{
 				layer.NewLayerNormAffine(cfg.FeaturesCount, cfg.LayerNormEps, provider.ProvideBlockLN2(block)),
-				layer.NewLinear(cfg.HiddenDim, initializer.KaimingNormalReLU, true, provider.ProvideBlockMLP1(block)),
+				layer.NewLinear(cfg.HiddenDim, initializer.KaimingNormalReLU, true, provider.ProvideBlockMLPFC(block)),
 				layer.NewGeLu(),
 				//layer.NewGeLuNew(),
-				layer.NewLinear(cfg.FeaturesCount, initializer.KaimingNormalReLU, true, provider.ProvideBlockMLP2(block)),
+				layer.NewLinear(cfg.FeaturesCount, initializer.KaimingNormalReLU, true, provider.ProvideBlockMLPProj(block)),
 				layer.NewDropout(cfg.DropoutProb),
 			}),
 		)
@@ -91,5 +66,5 @@ func NewGPT2(cfg GPT2Config, device *proc.Device, optimizer proc.Optimizer) *Mod
 		layer.NewReshape(mtl.NewMTLSize(cfg.VocabSize, cfg.BatchSize*cfg.ContextLength)),
 	)
 
-	return New(inDims, layers, device, optimizer)
+	return model.New(inDims, layers, device, optimizer)
 }

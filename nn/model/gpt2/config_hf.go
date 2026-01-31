@@ -15,20 +15,20 @@ type hfGPT2Config struct {
 	LayerNormEps float32 `json:"layer_norm_epsilon"`
 }
 
-func LoadGPT2Config(path string, batchSize int, dropout float32) (GPT2Config, error) {
+func LoadHFConfig(path string, batchSize int, dropout float32) (Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return GPT2Config{}, fmt.Errorf("read config: %w", err)
+		return Config{}, fmt.Errorf("read config: %w", err)
 	}
 	var cfg hfGPT2Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return GPT2Config{}, fmt.Errorf("parse config: %w", err)
+		return Config{}, fmt.Errorf("parse config: %w", err)
 	}
 	if cfg.NEmb == 0 || cfg.NHead == 0 || cfg.NPositions == 0 || cfg.VocabSize == 0 {
-		return GPT2Config{}, fmt.Errorf("invalid config: %+v", cfg)
+		return Config{}, fmt.Errorf("invalid config: %+v", cfg)
 	}
 	headSize := cfg.NEmb / cfg.NHead
-	return GPT2Config{
+	return Config{
 		ContextLength: cfg.NPositions,
 		FeaturesCount: cfg.NEmb,
 		HeadsCount:    cfg.NHead,

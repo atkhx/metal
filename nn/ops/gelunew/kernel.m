@@ -57,7 +57,8 @@ static inline MTLSize threadgroupSize1D(id<MTLComputePipelineState> pso) {
     [encoder setComputePipelineState:_geluPSO];
     [encoder setBuffer:inputData offset:0 atIndex:0];
     [encoder setBuffer:outputData offset:0 atIndex:1];
-    [encoder dispatchThreads:MTLSizeMake(inputData.length/sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_geluPSO)];
+//     [encoder dispatchThreads:MTLSizeMake(inputData.length/sizeof(float), 1, 1) threadsPerThreadgroup:threadgroupSize1D(_geluPSO)];
+    [encoder dispatchThreads:MTLSizeMake(inputData.length/sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
     [encoder endEncoding];
 }
 

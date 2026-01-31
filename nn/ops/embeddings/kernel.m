@@ -61,6 +61,7 @@ static inline MTLSize threadgroupSize2D(id<MTLComputePipelineState> pso) {
         featuresCount:(uint)featuresCount
         contextLength:(uint)contextLength
 {
+    // rowsCount = contextLength * batchSize
     uint rowsCount = outputData.length/(sizeof(float)*featuresCount);
 
     id<MTLComputeCommandEncoder> embeddings = [commandBuffer computeCommandEncoder];

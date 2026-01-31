@@ -2,27 +2,29 @@
 
 using namespace metal;
 
-constant float kEps = 1e-5;
-
 kernel void calcMeanInvStd(
     device float *input [[ buffer(0) ]],
     device float *meanData [[ buffer(1) ]],
     device float *invStdData [[ buffer(2) ]],
     constant uint& width [[ buffer(3) ]],
+    constant float& eps [[ buffer(4) ]],
     const uint row [[ thread_position_in_grid ]] )
 {
-    float sum = 0.0;
-    float sumsq = 0.0;
     uint start = row * width;
+    float mean = 0.0;
+    float m2 = 0.0;
+    float count = 0.0;
     for (uint i = start; i < start + width; ++i) {
-        float v = input[i];
-        sum += v;
-        sumsq += v * v;
+        float x = input[i];
+        count += 1.0;
+        float delta = x - mean;
+        mean += delta / count;
+        float delta2 = x - mean;
+        m2 += delta * delta2;
     }
-    float mean = sum / float(width);
-    float var = (sumsq / float(width)) - (mean * mean);
+    float var = m2 / count;
     meanData[row] = mean;
-    invStdData[row] = rsqrt(var + kEps);
+    invStdData[row] = rsqrt(var + eps);
 }
 
 kernel void normByStats(

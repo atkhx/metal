@@ -19,6 +19,7 @@ void layerNormRowsForward(
     void *meanData,
     void *invStdData,
     uint width,
+    float eps,
     uint rowsCount
 ) {
     [(__bridge LayerNormRowsKernelImpl*)kernel forward:(id<MTLCommandBuffer>)commandBuffer
@@ -27,6 +28,7 @@ void layerNormRowsForward(
         meanData:(id<MTLBuffer>)meanData
         invStdData:(id<MTLBuffer>)invStdData
         width:width
+        eps:eps
         rowsCount:rowsCount];
 }
 
@@ -72,6 +74,7 @@ func New(
 	input *num.Data,
 	output *num.Data,
 	width int,
+	eps float32,
 ) *Kernel {
 	cKernelString := C.CString(metalFunctions)
 	defer C.free(unsafe.Pointer(cKernelString))
@@ -83,6 +86,7 @@ func New(
 		output:   output,
 		width:    width,
 		rows:     rows,
+		eps:      eps,
 		mean:     device.NewBufferEmptyFloatsBuffer(rows, mtl.ResourceStorageModeShared),
 		invStd:   device.NewBufferEmptyFloatsBuffer(rows, mtl.ResourceStorageModeShared),
 		sumDy:    device.NewBufferEmptyFloatsBuffer(rows, mtl.ResourceStorageModeShared),
@@ -96,6 +100,7 @@ type Kernel struct {
 	output   *num.Data
 	width    int
 	rows     int
+	eps      float32
 	mean     *mtl.Buffer
 	invStd   *mtl.Buffer
 	sumDy    *mtl.Buffer
@@ -111,6 +116,7 @@ func (k *Kernel) Forward(b *mtl.CommandBuffer) {
 		k.mean.GetID(),
 		k.invStd.GetID(),
 		C.uint(k.width),
+		C.float(k.eps),
 		C.uint(k.rows),
 	)
 }

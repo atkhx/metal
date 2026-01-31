@@ -13,7 +13,9 @@ kernel void gelunew(
     float x = inputData[id];
     float x3 = x * x * x;
     float u = kSqrt2OverPi * (x + kGeluC * x3);
-    float t = tanh(u);
+//    u = clamp(u, -10.0f, 10.0f); // или -8..8
+//    float t = tanh(u);
+    float t = precise::tanh(u);
     outputData[id] = 0.5 * x * (1.0 + t);
 }
 
@@ -28,7 +30,8 @@ kernel void gelunewGrads(
     float x2 = x * x;
     float x3 = x2 * x;
     float u = kSqrt2OverPi * (x + kGeluC * x3);
-    float t = tanh(u);
+//    float t = tanh(u);
+    float t = precise::tanh(u);
     float du = kSqrt2OverPi * (1.0 + 3.0 * kGeluC * x2);
     float dt = (1.0 - t * t) * du;
     float geluDeriv = 0.5 * (1.0 + t) + 0.5 * x * dt;

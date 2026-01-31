@@ -34,6 +34,13 @@ func NewReader(r ReadReadAt) (*reader, error) {
 	return &reader{f: r, headers: headers, headerLen: headerLen}, nil
 }
 
+func (r *reader) TensorShape(name string) ([]int, error) {
+	if _, ok := r.headers[name]; !ok {
+		return nil, fmt.Errorf("block %s not found", name)
+	}
+	return r.headers[name].Shape, nil
+}
+
 func (r *reader) ReadTensor(name string) ([]float32, error) {
 	if _, ok := r.headers[name]; !ok {
 		return nil, fmt.Errorf("block %s not found", name)
@@ -69,15 +76,17 @@ func readTensor(r ReadReadAt, offset int64, h header, name string) ([]float32, e
 	size := end - start
 
 	buf := make([]byte, size)
-	if _, err := r.ReadAt(buf, offset+start); err != nil {
+	if n, err := r.ReadAt(buf, offset+start); err != nil {
 		return nil, fmt.Errorf("read block %s: %v", name, err)
+	} else if int64(n) != size {
+		return nil, fmt.Errorf("read block %s: read %d bytes, expected %d", name, n, size)
 	}
 
 	switch h.DType {
 	case "F32":
 		out := make([]float32, 0, len(buf)/4)
 		for i := 0; i < len(buf); i += 4 {
-			out = append(out, math.Float32frombits(binary.LittleEndian.Uint32(buf[i*4:i*4+4])))
+			out = append(out, math.Float32frombits(binary.LittleEndian.Uint32(buf[i:i+4])))
 		}
 		return out, nil
 	case "F16":
@@ -100,7 +109,6 @@ func halfToFloat32(h uint16) float32 {
 		if frac == 0 {
 			return math.Float32frombits(sign << 31)
 		}
-		// subnormal
 		for (frac & 0x400) == 0 {
 			frac <<= 1
 			exp--
