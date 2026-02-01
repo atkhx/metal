@@ -31,11 +31,10 @@ func (l *PositionalAdd) Compile(device *proc.Device, input *num.Data) *num.Data 
 	if input.Dims.W != l.features || input.Dims.H != l.context {
 		panic(fmt.Sprintf("PositionalAdd: expected %dx%d got %dx%d", l.features, l.context, input.Dims.W, input.Dims.H))
 	}
-	// todo use AddMatrix or improve AddEqual to use batch dimension
 	l.weights = device.NewData(mtl.NewMTLSize(l.features, l.context, 1))
 
 	l.forUpdate = []*num.Data{l.weights}
-	return device.AddEqual(input, l.weights)
+	return device.PositionalAdd(input, l.weights, l.features, l.context)
 }
 
 func (l *PositionalAdd) ForUpdate() []*num.Data {

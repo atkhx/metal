@@ -23,6 +23,7 @@ import (
 	"github.com/atkhx/metal/nn/ops/mulequal"
 	"github.com/atkhx/metal/nn/ops/mulrows"
 	"github.com/atkhx/metal/nn/ops/nllpos"
+	"github.com/atkhx/metal/nn/ops/positionaladd"
 	"github.com/atkhx/metal/nn/ops/relu"
 	"github.com/atkhx/metal/nn/ops/rmsnormrows"
 	"github.com/atkhx/metal/nn/ops/ropecols"
@@ -193,6 +194,12 @@ func (d *Device) LayerNorm(input *num.Data, width int, eps float32) *num.Data {
 func (d *Device) RopeCols(input *num.Data, featuresCount, headSize, contextLength int) *num.Data {
 	output := d.newLinkedCopy(input)
 	kernel := ropecols.New(d.mtlDevice, input, output, featuresCount, headSize, contextLength)
+	return d.assocKernel(output, kernel)
+}
+
+func (d *Device) PositionalAdd(input, weights *num.Data, colsCount, rowsCount int) *num.Data {
+	output := d.newLinkedCopy(input, weights)
+	kernel := positionaladd.New(d.mtlDevice, input, weights, output, colsCount, rowsCount)
 	return d.assocKernel(output, kernel)
 }
 
