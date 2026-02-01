@@ -63,22 +63,10 @@ func (b *Buffer) GetContents() unsafe.Pointer {
 	return C.mtlBufferGetContents(b.id)
 }
 
-const maxBufferSize = 32 * 1024 * 1024 * 1024
-
 func (b *Buffer) GetBytes() []byte {
-	length := b.GetLengthBytes()
-
-	bytesArray := (*[maxBufferSize]byte)(b.GetContents())[:length:length]
-	bytesSlice := *(*[]byte)(unsafe.Pointer(&bytesArray))
-
-	return bytesSlice
+	return unsafe.Slice((*byte)(b.GetContents()), int(b.GetLengthBytes()))
 }
 
 func (b *Buffer) GetFloats() []float32 {
-	length := b.GetLengthFloats()
-
-	bytesArray := (*[maxBufferSize]byte)(b.GetContents())[:length:length]
-	float32Slice := *(*[]float32)(unsafe.Pointer(&bytesArray))
-
-	return float32Slice
+	return unsafe.Slice((*float32)(b.GetContents()), int(b.GetLengthFloats()))
 }
