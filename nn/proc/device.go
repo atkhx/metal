@@ -1,7 +1,6 @@
 package proc
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -288,12 +287,6 @@ func (d *Device) Embeddings(input *num.Data, tEmbeddings *num.Data) *num.Data {
 	contextSize := input.Dims.W
 	batchSize := input.Dims.H
 
-	fmt.Println("Embeddings input.Dims", input.Dims)
-	fmt.Println("Embeddings tEmbeddings.Dims", tEmbeddings.Dims)
-	fmt.Println("featuresCount", featuresCount)
-	fmt.Println("contextSize", contextSize)
-	fmt.Println()
-
 	output := d.NewData(mtl.NewMTLSize(featuresCount, contextSize, batchSize), tEmbeddings)
 	kernel := embeddings.New(d.mtlDevice, input, output, tEmbeddings, featuresCount, contextSize)
 	return d.assocKernel(output, kernel)
@@ -305,14 +298,10 @@ func (d *Device) CrossEntropyPos(input, targets *num.Data) *num.Data {
 	}
 
 	if targets.Dims.H != input.Dims.H {
-		fmt.Println("targets.Dims.H", targets.Dims.H)
-		fmt.Println("input.Dims.H", input.Dims.H)
 		panic("target height must be equal input height")
 	}
 
 	if targets.Dims.D != input.Dims.D {
-		fmt.Println("targets.Dims.D", targets.Dims.D)
-		fmt.Println("input.Dims.D", input.Dims.D)
 		panic("target depth must be equal input depth")
 	}
 

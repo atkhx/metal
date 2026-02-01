@@ -1,6 +1,7 @@
 package layer
 
 import (
+	"encoding/json"
 	"math"
 
 	"github.com/atkhx/metal/mtl"
@@ -30,12 +31,12 @@ func NewSAMultiHeadWithBias(
 }
 
 type SAMultiHeadWithBias struct {
-	QryWeights *num.Data
-	KeyWeights *num.Data
-	ValWeights *num.Data
-	QryBias    *num.Data
-	KeyBias    *num.Data
-	ValBias    *num.Data
+	qryWeights *num.Data
+	keyWeights *num.Data
+	valWeights *num.Data
+	qryBias    *num.Data
+	keyBias    *num.Data
+	valBias    *num.Data
 
 	forUpdate []*num.Data
 
@@ -54,32 +55,28 @@ func (l *SAMultiHeadWithBias) Compile(device *proc.Device, input *num.Data) *num
 	fanOut := l.featuresCount
 	batchSize := input.Dims.D
 
-	l.QryWeights = initWeights(device, l.initWeights, mtl.NewMTLSize(l.featuresCount, l.featuresCount), fanIn, fanOut)
-	l.KeyWeights = initWeights(device, l.initWeights, mtl.NewMTLSize(l.featuresCount, l.featuresCount), fanIn, fanOut)
-	l.ValWeights = initWeights(device, l.initWeights, mtl.NewMTLSize(l.featuresCount, l.featuresCount), fanIn, fanOut)
+	l.qryWeights = initWeights(device, l.initWeights, mtl.NewMTLSize(l.featuresCount, l.featuresCount), fanIn, fanOut)
+	l.keyWeights = initWeights(device, l.initWeights, mtl.NewMTLSize(l.featuresCount, l.featuresCount), fanIn, fanOut)
+	l.valWeights = initWeights(device, l.initWeights, mtl.NewMTLSize(l.featuresCount, l.featuresCount), fanIn, fanOut)
 
-	l.QryBias = device.NewData(mtl.NewMTLSize(l.featuresCount))
-	l.KeyBias = device.NewData(mtl.NewMTLSize(l.featuresCount))
-	l.ValBias = device.NewData(mtl.NewMTLSize(l.featuresCount))
+	l.qryBias = device.NewData(mtl.NewMTLSize(l.featuresCount))
+	l.keyBias = device.NewData(mtl.NewMTLSize(l.featuresCount))
+	l.valBias = device.NewData(mtl.NewMTLSize(l.featuresCount))
 
-	l.forUpdate = []*num.Data{l.QryWeights, l.KeyWeights, l.ValWeights, l.QryBias, l.KeyBias, l.ValBias}
+	l.forUpdate = []*num.Data{l.qryWeights, l.keyWeights, l.valWeights, l.qryBias, l.keyBias, l.valBias}
 
-	bx := input               // bx - horizontal [w: featuresCount, h: contextLength, d: batchSize]
-	bx = device.Transpose(bx) // bx - vertical [w: contextLength, h: featuresCount, d: batchSize]
+	bx := input
+	bx = device.Transpose(bx)
 
 	// Extract qkv-objects
-	qryObject := device.MatrixMultiply(l.QryWeights, bx, 1)
-	keyObject := device.MatrixMultiply(l.KeyWeights, bx, 1)
-	valObject := device.MatrixMultiply(l.ValWeights, bx, 1)
-	// l.QryWeights, l.KeyWeights, l.ValWeights
-	// - [w: featuresCount, h: featuresCount, d: 1]
-	// qryObject, keyObject, valObject
-	// - [w: contextLength, h: featuresCount, d: batchSize]
+	qryObject := device.MatrixMultiply(l.qryWeights, bx, 1)
+	keyObject := device.MatrixMultiply(l.keyWeights, bx, 1)
+	valObject := device.MatrixMultiply(l.valWeights, bx, 1)
 
 	// Add biases by rows (features)
-	qryObject = device.AddCol(qryObject, l.QryBias, qryObject.Dims.W, qryObject.Dims.H)
-	keyObject = device.AddCol(keyObject, l.KeyBias, keyObject.Dims.W, keyObject.Dims.H)
-	valObject = device.AddCol(valObject, l.ValBias, valObject.Dims.W, valObject.Dims.H)
+	qryObject = device.AddCol(qryObject, l.qryBias, qryObject.Dims.W, qryObject.Dims.H)
+	keyObject = device.AddCol(keyObject, l.keyBias, keyObject.Dims.W, keyObject.Dims.H)
+	valObject = device.AddCol(valObject, l.valBias, valObject.Dims.W, valObject.Dims.H)
 
 	// Apply RoPE if enabled
 	if l.useRoPE {
@@ -93,9 +90,6 @@ func (l *SAMultiHeadWithBias) Compile(device *proc.Device, input *num.Data) *num
 	qryObject = device.Reshape(qryObject, reshapeToDims)
 	keyObject = device.Reshape(keyObject, reshapeToDims)
 	valObject = device.Reshape(valObject, reshapeToDims)
-
-	// qryObject, keyObject, valObject
-	// - [w: contextLength, h: headSize, d: headsCount * batchSize]
 
 	// Transpose q and v
 	qryObject = device.Transpose(qryObject)
@@ -127,6 +121,42 @@ func (l *SAMultiHeadWithBias) ForUpdate() []*num.Data {
 
 func (l *SAMultiHeadWithBias) LoadFromProvider() {
 	if l.provideWeights != nil {
-		l.provideWeights(l.QryWeights, l.KeyWeights, l.ValWeights, l.QryBias, l.KeyBias, l.ValBias)
+		l.provideWeights(l.qryWeights, l.keyWeights, l.valWeights, l.qryBias, l.keyBias, l.valBias)
 	}
+}
+
+type saMultiHeadWithBiasConfig struct {
+	QryWeights []float32
+	KeyWeights []float32
+	ValWeights []float32
+
+	QryBias []float32
+	KeyBias []float32
+	ValBias []float32
+}
+
+func (l *SAMultiHeadWithBias) MarshalJSON() ([]byte, error) {
+	config := saMultiHeadWithBiasConfig{
+		QryWeights: l.qryWeights.Data.GetFloats(),
+		KeyWeights: l.keyWeights.Data.GetFloats(),
+		ValWeights: l.valWeights.Data.GetFloats(),
+
+		QryBias: l.qryBias.Data.GetFloats(),
+		KeyBias: l.keyBias.Data.GetFloats(),
+		ValBias: l.valBias.Data.GetFloats(),
+	}
+	return json.Marshal(config)
+}
+
+func (l *SAMultiHeadWithBias) UnmarshalJSON(bytes []byte) error {
+	config := saMultiHeadWithBiasConfig{
+		QryWeights: l.qryWeights.Data.GetFloats(),
+		KeyWeights: l.keyWeights.Data.GetFloats(),
+		ValWeights: l.valWeights.Data.GetFloats(),
+
+		QryBias: l.qryBias.Data.GetFloats(),
+		KeyBias: l.keyBias.Data.GetFloats(),
+		ValBias: l.valBias.Data.GetFloats(),
+	}
+	return json.Unmarshal(bytes, &config)
 }

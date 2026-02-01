@@ -46,10 +46,6 @@ static inline MTLSize threadgroupSize2D(id<MTLComputePipelineState> pso) {
 
         _embeddingsPSO      = [self createPipelineStateWithFunctionName:@"embeddings"];
         _embeddingsGradsPSO = [self createPipelineStateWithFunctionName:@"embeddingsGrads"];
-
-        printf("EmbeddingsKernel PSO: execWidth=%lu maxThreads=%lu\n",
-            (unsigned long)_embeddingsPSO.threadExecutionWidth,
-            (unsigned long)_embeddingsPSO.maxTotalThreadsPerThreadgroup);
     }
     return self;
 }
