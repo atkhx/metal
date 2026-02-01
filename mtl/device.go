@@ -107,7 +107,7 @@ void* mtlDeviceNewCommandQueue(void *deviceID) {
     return [(id<MTLDevice>)deviceID newCommandQueue];
 }
 
-void* mtlDeviceNewBufferWithBytes(void *deviceID, float *bytes, NSUInteger length, MTLResourceOptions options) {
+void* mtlDeviceNewBufferWithBytes(void *deviceID, const void *bytes, NSUInteger length, MTLResourceOptions options) {
     return [(id<MTLDevice>)deviceID newBufferWithBytes:bytes length:length options:options];
 }
 
@@ -245,18 +245,24 @@ func (d *Device) NewCommandQueue() *CommandQueue {
 }
 
 func (d *Device) NewBufferWithBytes(data []byte, options resourceOptions) *Buffer {
+	if len(data) == 0 {
+		panic("data is empty")
+	}
 	return CreateBuffer(C.mtlDeviceNewBufferWithBytes(
 		d.id,
-		(*C.float)(unsafe.Pointer(&data[0])),
+		unsafe.Pointer(&data[0]),
 		C.ulong(len(data)),
 		C.MTLResourceOptions(options),
 	))
 }
 
 func (d *Device) NewBufferWithFloats(data []float32, options resourceOptions) *Buffer {
+	if len(data) == 0 {
+		panic("data is empty")
+	}
 	return CreateBuffer(C.mtlDeviceNewBufferWithBytes(
 		d.id,
-		(*C.float)(unsafe.Pointer(&data[0])),
+		unsafe.Pointer(&data[0]),
 		C.ulong(len(data)*int(unsafe.Sizeof(float32(0)))),
 		C.MTLResourceOptions(options),
 	))
