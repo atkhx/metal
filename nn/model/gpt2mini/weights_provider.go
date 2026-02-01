@@ -37,7 +37,14 @@ func (w *WeightsProvider) ProvideBlockLN2(block int) func(gamma, beta *num.Data)
 	}
 }
 
-func (w *WeightsProvider) ProvideBlockQKV(block int) func(qw, kw, vw, qb, kb, vb *num.Data) {
+func (w *WeightsProvider) ProvideBlockQKV(block int) func(qkvW, qkvB *num.Data) {
+	return func(qkvW, qkvB *num.Data) {
+		w.copyWithCheckLength(qkvW, w.Must(w.ReadBlockQKVWeights(block)))
+		w.copyWithCheckLength(qkvB, w.Must(w.ReadBlockQKVBias(block)))
+	}
+}
+
+func (w *WeightsProvider) ProvideSeparateBlockQKV(block int) func(qw, kw, vw, qb, kb, vb *num.Data) {
 	// TODO try to build model without splitting qkv
 	return func(qw, kw, vw, qb, kb, vb *num.Data) {
 		// read separate qkv weights

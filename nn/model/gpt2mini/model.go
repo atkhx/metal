@@ -44,7 +44,7 @@ func NewModel(cfg Config, device *proc.Device, optimizer proc.Optimizer) *model.
 					cfg.ContextLength,
 					false,
 					initializer.XavierNormalLinear,
-					provider.ProvideBlockQKV(block),
+					provider.ProvideSeparateBlockQKV(block),
 				),
 				layer.NewLinear(cfg.FeaturesCount, initializer.XavierNormalLinear, true, provider.ProvideBlockAttnProj(block)),
 				layer.NewDropout(cfg.DropoutProb),

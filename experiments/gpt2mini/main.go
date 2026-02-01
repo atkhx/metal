@@ -20,7 +20,7 @@ var (
 	vocabPath   = flag.String("vocab", "data/gpt2mini/gpt2-mini/vocab.json", "vocab.json for decode")
 	mergesPath  = flag.String("merges", "data/gpt2mini/gpt2-mini/merges.txt", "merges.txt for encode")
 	prompt      = flag.String("prompt", "", "prompt text (overrides -tokens)")
-	steps       = flag.Int("steps", 100, "generation steps")
+	steps       = flag.Int("steps", 2048, "generation steps")
 )
 
 func main() {
@@ -78,14 +78,18 @@ func main() {
 		logits := output.Data.GetFloats()[pos*cfg.VocabSize : (pos+1)*cfg.VocabSize]
 		next := sampleWithTemperature(logits, 0.9)
 
-		inputTokens = append(inputTokens, uint32(next))
+		nextToken := uint32(next)
+		inputTokens = append(inputTokens, nextToken)
 		if len(inputTokens) > cfg.ContextLength {
 			inputTokens = inputTokens[len(inputTokens)-cfg.ContextLength:]
 		}
-		if s, err := tokenizer.Decode([]uint32{uint32(next)}); err != nil {
+		if s, err := tokenizer.Decode([]uint32{nextToken}); err != nil {
 			log.Fatalf("decode tokens: %v", err)
 		} else {
 			fmt.Print(s)
+		}
+		if nextToken == 50256 { // endoftext
+			break
 		}
 	}
 	fmt.Println()

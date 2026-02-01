@@ -78,14 +78,18 @@ func main() {
 		logits := output.Data.GetFloats()[pos*cfg.VocabSize : (pos+1)*cfg.VocabSize]
 		next := sampleWithTemperature(logits, 0.9)
 
-		inputTokens = append(inputTokens, uint32(next))
+		nextToken := uint32(next)
+		inputTokens = append(inputTokens, nextToken)
 		if len(inputTokens) > cfg.ContextLength {
 			inputTokens = inputTokens[len(inputTokens)-cfg.ContextLength:]
 		}
-		if s, err := tokenizer.Decode([]uint32{uint32(next)}); err != nil {
+		if s, err := tokenizer.Decode([]uint32{nextToken}); err != nil {
 			log.Fatalf("decode tokens: %v", err)
 		} else {
 			fmt.Print(s)
+		}
+		if nextToken == 50256 { // endoftext
+			break
 		}
 	}
 	fmt.Println()
