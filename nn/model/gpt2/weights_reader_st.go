@@ -1,4 +1,4 @@
-package gpt2large
+package gpt2
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ type (
 	}
 	WeightsSTReader struct {
 		WeightsReader
+		WeightsPrefix string
 	}
 )
 
@@ -21,36 +22,40 @@ func (w *WeightsSTReader) Must(f []float32, err error) []float32 {
 	return f
 }
 
+func (w *WeightsSTReader) tn(name string) string {
+	return w.WeightsPrefix + name
+}
+
 func (w *WeightsSTReader) ReadWTE() ([]float32, error) {
-	return w.ReadTensor("wte.weight")
+	return w.ReadTensor(w.tn("wte.weight"))
 }
 
 func (w *WeightsSTReader) ReadWPE() ([]float32, error) {
-	return w.ReadTensor("wpe.weight")
+	return w.ReadTensor(w.tn("wpe.weight"))
 }
 
 func (w *WeightsSTReader) ReadBlockLN1Weights(block int) ([]float32, error) {
-	return w.ReadTensor(fmt.Sprintf("h.%d.ln_1.weight", block))
+	return w.ReadTensor(w.tn(fmt.Sprintf("h.%d.ln_1.weight", block)))
 }
 
 func (w *WeightsSTReader) ReadBlockLN1Bias(block int) ([]float32, error) {
-	return w.ReadTensor(fmt.Sprintf("h.%d.ln_1.bias", block))
+	return w.ReadTensor(w.tn(fmt.Sprintf("h.%d.ln_1.bias", block)))
 }
 
 func (w *WeightsSTReader) ReadBlockLN2Weights(block int) ([]float32, error) {
-	return w.ReadTensor(fmt.Sprintf("h.%d.ln_2.weight", block))
+	return w.ReadTensor(w.tn(fmt.Sprintf("h.%d.ln_2.weight", block)))
 }
 
 func (w *WeightsSTReader) ReadBlockLN2Bias(block int) ([]float32, error) {
-	return w.ReadTensor(fmt.Sprintf("h.%d.ln_2.bias", block))
+	return w.ReadTensor(w.tn(fmt.Sprintf("h.%d.ln_2.bias", block)))
 }
 
 func (w *WeightsSTReader) ReadBlockQKVWeights(block int) ([]float32, error) {
-	return w.ReadTensor(fmt.Sprintf("h.%d.attn.c_attn.weight", block))
+	return w.ReadTensor(w.tn(fmt.Sprintf("h.%d.attn.c_attn.weight", block)))
 }
 
 func (w *WeightsSTReader) ReadBlockQKVBias(block int) ([]float32, error) {
-	return w.ReadTensor(fmt.Sprintf("h.%d.attn.c_attn.bias", block))
+	return w.ReadTensor(w.tn(fmt.Sprintf("h.%d.attn.c_attn.bias", block)))
 }
 
 func (w *WeightsSTReader) ReadSeparateBlockQKVWeights(block int) ([]float32, []float32, []float32, error) {
@@ -58,7 +63,7 @@ func (w *WeightsSTReader) ReadSeparateBlockQKVWeights(block int) ([]float32, []f
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	shape, err := w.TensorShape(fmt.Sprintf("h.%d.attn.c_attn.weight", block))
+	shape, err := w.TensorShape(w.tn(fmt.Sprintf("h.%d.attn.c_attn.weight", block)))
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -94,33 +99,33 @@ func (w *WeightsSTReader) ReadSeparateBlockQKVBias(block int) ([]float32, []floa
 }
 
 func (w *WeightsSTReader) ReadBlockAttnProjWeights(block int) ([]float32, error) {
-	return w.ReadTensor(fmt.Sprintf("h.%d.attn.c_proj.weight", block))
+	return w.ReadTensor(w.tn(fmt.Sprintf("h.%d.attn.c_proj.weight", block)))
 }
 
 func (w *WeightsSTReader) ReadBlockAttnProjBias(block int) ([]float32, error) {
-	return w.ReadTensor(fmt.Sprintf("h.%d.attn.c_proj.bias", block))
+	return w.ReadTensor(w.tn(fmt.Sprintf("h.%d.attn.c_proj.bias", block)))
 }
 
 func (w *WeightsSTReader) ReadBlockMLPProjWeights(block int) ([]float32, error) {
-	return w.ReadTensor(fmt.Sprintf("h.%d.mlp.c_proj.weight", block))
+	return w.ReadTensor(w.tn(fmt.Sprintf("h.%d.mlp.c_proj.weight", block)))
 }
 
 func (w *WeightsSTReader) ReadBlockMLPProjBias(block int) ([]float32, error) {
-	return w.ReadTensor(fmt.Sprintf("h.%d.mlp.c_proj.bias", block))
+	return w.ReadTensor(w.tn(fmt.Sprintf("h.%d.mlp.c_proj.bias", block)))
 }
 
 func (w *WeightsSTReader) ReadBlockMLPFCWeights(block int) ([]float32, error) {
-	return w.ReadTensor(fmt.Sprintf("h.%d.mlp.c_fc.weight", block))
+	return w.ReadTensor(w.tn(fmt.Sprintf("h.%d.mlp.c_fc.weight", block)))
 }
 
 func (w *WeightsSTReader) ReadBlockMLPFCBias(block int) ([]float32, error) {
-	return w.ReadTensor(fmt.Sprintf("h.%d.mlp.c_fc.bias", block))
+	return w.ReadTensor(w.tn(fmt.Sprintf("h.%d.mlp.c_fc.bias", block)))
 }
 
 func (w *WeightsSTReader) ReadFinalLNWeights() ([]float32, error) {
-	return w.ReadTensor("ln_f.weight")
+	return w.ReadTensor(w.tn("ln_f.weight"))
 }
 
 func (w *WeightsSTReader) ReadFinalLNBias() ([]float32, error) {
-	return w.ReadTensor("ln_f.bias")
+	return w.ReadTensor(w.tn("ln_f.bias"))
 }

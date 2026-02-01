@@ -1,10 +1,12 @@
-package gpt2medium
+package gpt2
 
 import (
 	"github.com/atkhx/metal/mtl"
 	"github.com/atkhx/metal/nn/initializer"
 	"github.com/atkhx/metal/nn/layer"
 	"github.com/atkhx/metal/nn/model"
+	"github.com/atkhx/metal/nn/num"
+	"github.com/atkhx/metal/nn/pipeline"
 	"github.com/atkhx/metal/nn/proc"
 
 	jsoniter "github.com/json-iterator/go"
@@ -12,6 +14,15 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
+func NewModelForTest(cfg Config, device *proc.Device) (input *num.Data, output *num.Data, pipeline *pipeline.InferencePipeline) {
+	gpt2Model := NewModel(cfg, device, nil)
+	gpt2Model.Compile()
+	if cfg.WeightsProvider != nil {
+		gpt2Model.LoadFromProvider()
+	}
+	input, output = gpt2Model.GetInput(), gpt2Model.GetOutput()
+	return input, output, device.GetInferencePipeline(output)
+}
 func NewModel(cfg Config, device *proc.Device, optimizer proc.Optimizer) *model.Model {
 	inDims := mtl.MTLSize{
 		W: cfg.ContextLength,
@@ -44,7 +55,7 @@ func NewModel(cfg Config, device *proc.Device, optimizer proc.Optimizer) *model.
 					cfg.ContextLength,
 					false,
 					initializer.XavierNormalLinear,
-					provider.ProvideBlockQKV(block),
+					provider.ProvideSeparateBlockQKV(block),
 				),
 				layer.NewLinear(cfg.FeaturesCount, initializer.XavierNormalLinear, true, provider.ProvideBlockAttnProj(block)),
 				layer.NewDropout(cfg.DropoutProb),
@@ -52,8 +63,7 @@ func NewModel(cfg Config, device *proc.Device, optimizer proc.Optimizer) *model.
 			layer.NewResidual(layer.Layers{
 				layer.NewLayerNormAffine(cfg.FeaturesCount, cfg.LayerNormEps, provider.ProvideBlockLN2(block)),
 				layer.NewLinear(cfg.HiddenDim, initializer.KaimingNormalReLU, true, provider.ProvideBlockMLPFC(block)),
-				layer.NewGeLu(),
-				//layer.NewGeLuNew(),
+				layer.NewGeLuNew(),
 				layer.NewLinear(cfg.FeaturesCount, initializer.KaimingNormalReLU, true, provider.ProvideBlockMLPProj(block)),
 				layer.NewDropout(cfg.DropoutProb),
 			}),

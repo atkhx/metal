@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+const TokenEOT = uint32(50256)
+
 // Tokenizer implements GPT-2 BPE tokenization (byte-level).
 type Tokenizer struct {
 	vocab       map[string]int
@@ -45,6 +47,21 @@ func NewFromFiles(vocabPath, mergesPath string) (*Tokenizer, error) {
 			`'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+`,
 		),
 	}, nil
+}
+
+func (t *Tokenizer) EncodeToFloat32s(text string, length int) ([]float32, error) {
+	tokens, err := t.Encode(text)
+	if err != nil {
+		return nil, err
+	}
+	if length < 1 {
+		length = len(tokens)
+	}
+	floats := make([]float32, 0, length)
+	for _, token := range tokens {
+		floats = append(floats, float32(token))
+	}
+	return floats, nil
 }
 
 // Encode converts text into token ids.

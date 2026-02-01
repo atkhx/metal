@@ -1,19 +1,34 @@
-package gpt2large
+package gpt2
 
 import (
 	"fmt"
 	"os"
 )
 
-type hfGPT2Config struct {
-	NEmb         int     `json:"n_embd"`
-	NHead        int     `json:"n_head"`
-	NInner       int     `json:"n_inner"`
-	NLayer       int     `json:"n_layer"`
-	NPositions   int     `json:"n_positions"`
-	VocabSize    int     `json:"vocab_size"`
-	LayerNormEps float32 `json:"layer_norm_epsilon"`
-}
+type (
+	Config struct {
+		ContextLength   int
+		FeaturesCount   int
+		HeadsCount      int
+		HeadSize        int
+		HiddenDim       int
+		BlocksCount     int
+		VocabSize       int
+		BatchSize       int
+		DropoutProb     float32
+		LayerNormEps    float32
+		WeightsProvider *WeightsProvider
+	}
+	hfGPT2Config struct {
+		NEmb         int     `json:"n_embd"`
+		NHead        int     `json:"n_head"`
+		NInner       int     `json:"n_inner"`
+		NLayer       int     `json:"n_layer"`
+		NPositions   int     `json:"n_positions"`
+		VocabSize    int     `json:"vocab_size"`
+		LayerNormEps float32 `json:"layer_norm_epsilon"`
+	}
+)
 
 func LoadHFConfig(path string, batchSize int, dropout float32) (Config, error) {
 	data, err := os.ReadFile(path)
