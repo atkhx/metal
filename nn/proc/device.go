@@ -341,10 +341,11 @@ func (d *Device) GetConvSize(imageSize, filterSize, filtersCount, batchSize, pad
 	return mtl.MTLSize{W: ow, H: oh, D: od}
 }
 
-func (d *Device) GetPoolSize(width, height, poolSize, padding, stride int) mtl.MTLSize {
-	ow := (width-poolSize+2*padding)/stride + 1
-	oh := (height-poolSize+2*padding)/stride + 1
-	return mtl.MTLSize{W: ow, H: oh, D: 1}
+func (d *Device) GetPoolSize(iDims mtl.MTLSize, poolSize, padding, stride int) mtl.MTLSize {
+	oDims := iDims
+	oDims.W = (iDims.W-poolSize+2*padding)/stride + 1
+	oDims.H = (iDims.H-poolSize+2*padding)/stride + 1
+	return oDims
 }
 
 func (d *Device) Conv(input, weights, biases *num.Data, filtersCount, batchSize, padding, stride int) *num.Data {
@@ -365,8 +366,7 @@ func (d *Device) MaxPool2D(input *num.Data, poolSize, padding, stride int) *num.
 		panic("padding must be >= 0")
 	}
 
-	out := d.GetPoolSize(input.Dims.W, input.Dims.H, poolSize, padding, stride)
-	out.D = input.Dims.D
+	out := d.GetPoolSize(input.Dims, poolSize, padding, stride)
 
 	output := d.NewData(out, input)
 	kernel := maxpool.New(d.mtlDevice, input, output, poolSize, stride, padding)

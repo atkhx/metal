@@ -44,11 +44,11 @@ func NewCNN(
 		layers = append(layers, layer.NewReLu())
 		layers = append(layers, layer.NewMaxPool2D(2, 2, 0))
 		oDims = device.GetConvSize(oDims.W, filterSize, filtersCount, miniBatchSize, padding, stride)
-		oDims = device.GetPoolSize(oDims.W, oDims.H, 2, 0, 2)
+		oDims = device.GetPoolSize(oDims, 2, 0, 2)
 	}
 
-	nDims := mtl.NewMTLSize(oDims.W*oDims.W*filtersCount, 1, miniBatchSize)
-	layers = append(layers, layer.NewReshape(nDims))
+	oDims = mtl.NewMTLSize(oDims.Length()/miniBatchSize, 1, miniBatchSize)
+	layers = append(layers, layer.NewReshape(oDims))
 
 	if linearSize > 0 {
 		layers = append(layers, layer.NewLinear(linearSize, cfg.Conv, true, nil))
