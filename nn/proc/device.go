@@ -18,6 +18,7 @@ import (
 	"github.com/atkhx/metal/nn/ops/gelunew"
 	"github.com/atkhx/metal/nn/ops/layernormrows"
 	"github.com/atkhx/metal/nn/ops/matmul"
+	"github.com/atkhx/metal/nn/ops/maxpool"
 	"github.com/atkhx/metal/nn/ops/mean"
 	"github.com/atkhx/metal/nn/ops/mulcols"
 	"github.com/atkhx/metal/nn/ops/mulequal"
@@ -351,10 +352,35 @@ func (d *Device) GetConvSize(imageSize, filterSize, filtersCount, batchSize, pad
 	return mtl.MTLSize{W: ow, H: oh, D: od}
 }
 
+func (d *Device) GetPoolSize(width, height, poolSize, padding, stride int) mtl.MTLSize {
+	ow := (width-poolSize+2*padding)/stride + 1
+	oh := (height-poolSize+2*padding)/stride + 1
+	return mtl.MTLSize{W: ow, H: oh, D: 1}
+}
+
 func (d *Device) Conv(input, weights, biases *num.Data, filtersCount, batchSize, padding, stride int) *num.Data {
 	convSize := d.GetConvSize(input.Dims.W, weights.Dims.W, filtersCount, batchSize, padding, stride)
 	output := d.NewData(convSize, input, weights, biases)
 	kernel := conv.New(d.mtlDevice, input, weights, biases, output, filtersCount, batchSize, padding, stride)
+	return d.assocKernel(output, kernel)
+}
+
+func (d *Device) MaxPool2D(input *num.Data, poolSize, padding, stride int) *num.Data {
+	if poolSize < 1 {
+		panic("poolSize must be >= 1")
+	}
+	if stride < 1 {
+		panic("stride must be >= 1")
+	}
+	if padding < 0 {
+		panic("padding must be >= 0")
+	}
+
+	out := d.GetPoolSize(input.Dims.W, input.Dims.H, poolSize, padding, stride)
+	out.D = input.Dims.D
+
+	output := d.NewData(out, input)
+	kernel := maxpool.New(d.mtlDevice, input, output, poolSize, stride, padding)
 	return d.assocKernel(output, kernel)
 }
 
