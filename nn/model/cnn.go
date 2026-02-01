@@ -42,7 +42,7 @@ func NewCNN(
 			nil,
 		))
 		layers = append(layers, layer.NewReLu())
-		oDims = device.GetConvSize(oDims.W, filterSize, filtersCount, padding, stride)
+		oDims = device.GetConvSize(oDims.W, filterSize, filtersCount, miniBatchSize, padding, stride)
 	}
 
 	nDims := mtl.NewMTLSize(oDims.W*oDims.W*filtersCount, 1, miniBatchSize)

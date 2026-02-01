@@ -58,6 +58,7 @@ func NewConv(
 			oDims.W,
 			convLayerCfg.Size,
 			convLayerCfg.Count,
+			miniBatchSize,
 			convLayerCfg.Padding,
 			convLayerCfg.Stride,
 		)

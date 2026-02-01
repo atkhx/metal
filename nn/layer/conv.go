@@ -64,7 +64,10 @@ func (l *Conv) GetWeights() *num.Data {
 }
 
 func (l *Conv) Compile(device *proc.Device, input *num.Data) *num.Data {
-	filterDepth := input.Dims.D
+	if input.Dims.D%l.batchSize != 0 {
+		panic("Conv: input depth must be divisible by batchSize")
+	}
+	filterDepth := input.Dims.D / l.batchSize
 
 	fanIn := l.filterSize * l.filterSize * filterDepth
 	fanOut := l.filterSize * l.filterSize * l.filtersCount

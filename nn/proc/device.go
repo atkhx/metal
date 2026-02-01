@@ -336,16 +336,16 @@ func (d *Device) MatrixMultiply(aData, bData *num.Data, alpha float32) *num.Data
 	return d.assocKernel(output, kernel)
 }
 
-func (d *Device) GetConvSize(imageSize, filterSize, filtersCount, padding, stride int) mtl.MTLSize {
+func (d *Device) GetConvSize(imageSize, filterSize, filtersCount, batchSize, padding, stride int) mtl.MTLSize {
 	ow := (imageSize-filterSize+2*padding)/stride + 1
 	oh := (imageSize-filterSize+2*padding)/stride + 1
-	od := filtersCount
+	od := filtersCount * batchSize
 
 	return mtl.MTLSize{W: ow, H: oh, D: od}
 }
 
 func (d *Device) Conv(input, weights, biases *num.Data, filtersCount, batchSize, padding, stride int) *num.Data {
-	convSize := d.GetConvSize(input.Dims.W, weights.Dims.W, filtersCount*batchSize, padding, stride)
+	convSize := d.GetConvSize(input.Dims.W, weights.Dims.W, filtersCount, batchSize, padding, stride)
 	output := d.NewData(convSize, input, weights, biases)
 	kernel := conv.New(d.mtlDevice, input, weights, biases, output, filtersCount, batchSize, padding, stride)
 	return d.assocKernel(output, kernel)
