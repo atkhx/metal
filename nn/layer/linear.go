@@ -35,6 +35,7 @@ type Linear struct {
 	weightObj *num.Data
 	biasesObj *num.Data
 
+	output    *num.Data
 	forUpdate []*num.Data
 }
 
@@ -57,7 +58,12 @@ func (l *Linear) Compile(device *proc.Device, input *num.Data) *num.Data {
 		result = device.AddRow(result, l.biasesObj, l.featuresCount)
 	}
 
+	l.output = result
 	return result
+}
+
+func (l *Linear) GetOutput() *num.Data {
+	return l.output
 }
 
 func (l *Linear) ForUpdate() []*num.Data {

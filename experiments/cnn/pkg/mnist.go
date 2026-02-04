@@ -1,7 +1,7 @@
 package pkg
 
 import (
-	"github.com/atkhx/metal/experiments/cnn/dataset/mnist"
+	"github.com/atkhx/metal/dataset/mnist"
 	"github.com/atkhx/metal/mtl"
 	"github.com/atkhx/metal/nn/initializer"
 	"github.com/atkhx/metal/nn/layer"

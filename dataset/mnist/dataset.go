@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/atkhx/metal/experiments/cnn/dataset"
+	"github.com/atkhx/metal/dataset"
 )
 
 const (

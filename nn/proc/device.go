@@ -1,6 +1,7 @@
 package proc
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/atkhx/metal/nn/ops/addcols"
 	"github.com/atkhx/metal/nn/ops/addequal"
 	"github.com/atkhx/metal/nn/ops/addrows"
+	"github.com/atkhx/metal/nn/ops/bce"
 	"github.com/atkhx/metal/nn/ops/conv"
 	"github.com/atkhx/metal/nn/ops/dropout"
 	"github.com/atkhx/metal/nn/ops/embeddings"
@@ -28,10 +30,14 @@ import (
 	"github.com/atkhx/metal/nn/ops/rmsnormrows"
 	"github.com/atkhx/metal/nn/ops/ropecols"
 	"github.com/atkhx/metal/nn/ops/sanitize"
+	"github.com/atkhx/metal/nn/ops/sigmoid"
 	"github.com/atkhx/metal/nn/ops/silu"
 	"github.com/atkhx/metal/nn/ops/softmax"
 	"github.com/atkhx/metal/nn/ops/transpose"
 	"github.com/atkhx/metal/nn/ops/trilmask"
+	"github.com/atkhx/metal/nn/ops/upsample2d"
+	"github.com/atkhx/metal/nn/ops/vaekl"
+	"github.com/atkhx/metal/nn/ops/vaesample"
 	"github.com/atkhx/metal/nn/pipeline"
 )
 
@@ -221,6 +227,12 @@ func (d *Device) SiLu(input *num.Data) *num.Data {
 	return d.assocKernel(output, kernel)
 }
 
+func (d *Device) Sigmoid(input *num.Data) *num.Data {
+	output := d.newLinkedCopy(input)
+	kernel := sigmoid.New(d.mtlDevice, input, output)
+	return d.assocKernel(output, kernel)
+}
+
 func (d *Device) GeLu(input *num.Data) *num.Data {
 	output := d.newLinkedCopy(input)
 	kernel := gelu.New(d.mtlDevice, input, output)
@@ -245,6 +257,8 @@ func (d *Device) Dropout(input *num.Data, prob float32) *num.Data {
 
 func (d *Device) Reshape(input *num.Data, dims mtl.MTLSize) *num.Data {
 	if input.Dims.Length() != dims.Length() {
+		fmt.Println("input.Dims.Length()", input.Dims.Length())
+		fmt.Println("dims.Length()", dims.Length())
 		panic("total dimension size must be equal with original")
 	}
 
@@ -311,6 +325,32 @@ func (d *Device) CrossEntropyPos(input, targets *num.Data) *num.Data {
 	return d.assocKernel(output, kernel)
 }
 
+func (d *Device) BinaryCrossEntropy(input, targets *num.Data) *num.Data {
+	if input.Dims != targets.Dims {
+		panic("input dims must be equal target dims")
+	}
+
+	output := d.NewData(input.Dims, input, targets)
+	kernel := bce.New(d.mtlDevice, input, targets, output)
+	return d.assocKernel(output, kernel)
+}
+
+func (d *Device) VAEKLDivergence(input *num.Data, latentDim int) *num.Data {
+	if latentDim < 1 {
+		panic("latentDim must be >= 1")
+	}
+	if input.Dims.W != latentDim*2 {
+		panic("input width must be 2 * latentDim")
+	}
+
+	out := input.Dims
+	out.W = latentDim
+
+	output := d.NewData(out, input)
+	kernel := vaekl.New(d.mtlDevice, input, output)
+	return d.assocKernel(output, kernel)
+}
+
 func (d *Device) MatrixMultiply(aData, bData *num.Data, alpha float32) *num.Data {
 	if aData.Dims.W != bData.Dims.H {
 		panic("aData width must be equal bData height")
@@ -370,6 +410,36 @@ func (d *Device) MaxPool2D(input *num.Data, poolSize, padding, stride int) *num.
 
 	output := d.NewData(out, input)
 	kernel := maxpool.New(d.mtlDevice, input, output, poolSize, stride, padding)
+	return d.assocKernel(output, kernel)
+}
+
+func (d *Device) UpSample2D(input *num.Data, scale int) *num.Data {
+	if scale < 1 {
+		panic("scale must be >= 1")
+	}
+
+	out := input.Dims
+	out.W *= scale
+	out.H *= scale
+
+	output := d.NewData(out, input)
+	kernel := upsample2d.New(d.mtlDevice, input, output, scale)
+	return d.assocKernel(output, kernel)
+}
+
+func (d *Device) VAESample(input *num.Data, latentDim int) *num.Data {
+	if latentDim < 1 {
+		panic("latentDim must be >= 1")
+	}
+	if input.Dims.W != latentDim*2 {
+		panic("input width must be 2 * latentDim")
+	}
+
+	out := input.Dims
+	out.W = latentDim
+
+	output := d.NewData(out, input)
+	kernel := vaesample.New(d.mtlDevice, input, output)
 	return d.assocKernel(output, kernel)
 }
 

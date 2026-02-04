@@ -1,4 +1,5 @@
 .PHONY: gpt2-mini-prepare gpt2-medium-prepare gpt2-large-prepare
+.PHONY: vae-gen-random vae-gen-interp vae-gen-grid vae-gen-encode vae-gen-encode-interp vae-gen-mix
 
 HF_GPT2_MINI_BASE = https://huggingface.co/erwanf/gpt2-mini/resolve/main
 HF_GPT2_MEDIUM_BASE = https://huggingface.co/gpt2-medium/resolve/main
@@ -57,3 +58,26 @@ gpt2-medium-test:
 
 gpt2-large-test:
 	go run ./experiments/gpt2 -model large -prompt 'Hello, Im a language model,'
+
+### VAE Experiment
+
+vae-mnist-train:
+	go run ./experiments/vae/mnist-train
+
+vae-mnist-gen-random: # Случайные латенты z ~ N(0,1), просто сэмплирование.
+	go run ./experiments/vae/mnist-generate -mode random -batch 16
+
+vae-mnist-gen-interp: # Интерполяция между двумя случайными латентами.
+	go run ./experiments/vae/mnist-generate -mode interp -batch 16
+
+vae-mnist-gen-grid: # 2D-сетка по первым двум латентным измерениям.
+	go run ./experiments/vae/mnist-generate -mode grid -grid 8
+
+vae-mnist-gen-encode: # Реконструкция: энкодер+декодер на случайном батче MNIST.
+	go run ./experiments/vae/mnist-generate -mode encode -batch 16
+
+vae-mnist-gen-encode-interp: # Интерполяция между двумя реальными изображениями MNIST.
+	go run ./experiments/vae/mnist-generate -mode encode_interp -batch 16
+
+vae-mnist-gen-mix: # Покомпонентный микс латентов двух реальных изображений.
+	go run ./experiments/vae/mnist-generate -mode mix -batch 16

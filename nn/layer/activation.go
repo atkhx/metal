@@ -23,6 +23,12 @@ func NewGeLuNew() *Activation {
 	}}
 }
 
+func NewSigmoid() *Activation {
+	return &Activation{activation: func(device *proc.Device, input *num.Data) *num.Data {
+		return device.Sigmoid(input)
+	}}
+}
+
 type Activation struct {
 	activation func(device *proc.Device, input *num.Data) *num.Data
 }

@@ -1,7 +1,7 @@
 package pkg
 
 import (
-	cifar_100 "github.com/atkhx/metal/experiments/cnn/dataset/cifar-100"
+	"github.com/atkhx/metal/dataset/cifar-100"
 	"github.com/atkhx/metal/mtl"
 	"github.com/atkhx/metal/nn/initializer"
 	"github.com/atkhx/metal/nn/layer"
