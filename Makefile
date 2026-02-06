@@ -104,3 +104,26 @@ vae-cifar-gen-encode-interp: # Интерполяция между двумя р
 
 vae-cifar-gen-mix: # Покомпонентный микс латентов двух реальных изображений.
 	go run ./experiments/vae/cifar-generate -mode mix -batch 16
+
+### VAE Photo Experiment
+
+vae-photo-train:
+	go run ./experiments/vae-photo/train
+
+vae-photo-gen-random: # Случайные латенты z ~ N(0,1), просто сэмплирование.
+	go run ./experiments/vae-photo/generate -mode random -batch 16
+
+vae-photo-gen-interp: # Интерполяция между двумя случайными латентами.
+	go run ./experiments/vae-photo/generate -mode interp -batch 16
+
+vae-photo-gen-grid: # 2D-сетка по первым двум латентным измерениям.
+	go run ./experiments/vae-photo/generate -mode grid -grid 8
+
+vae-photo-gen-encode: # Реконструкция: энкодер+декодер на случайном батче фото-патчей.
+	go run ./experiments/vae-photo/generate -mode encode -batch 16
+
+vae-photo-gen-encode-interp: # Интерполяция между двумя реальными фото-патчами.
+	go run ./experiments/vae-photo/generate -mode encode_interp -batch 16
+
+vae-photo-gen-mix: # Покомпонентный микс латентов двух реальных фото-патчей.
+	go run ./experiments/vae-photo/generate -mode mix -batch 16
