@@ -9,21 +9,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/atkhx/metal/dataset/mnist"
+	cifar_10 "github.com/atkhx/metal/dataset/cifar-10"
 	"github.com/atkhx/metal/experiments/vae/pkg"
 	"github.com/atkhx/metal/mtl"
 	"github.com/atkhx/metal/nn/proc"
 )
 
 var (
-	miniBatchSize = pkg.MNISTBatchSize
-	latentDim     = pkg.MNISTLatentDim
-	epochs        = 5000
+	miniBatchSize = pkg.CIFARBatchSize
+	latentDim     = pkg.CIFARLatentDim
+	epochs        = 20000
 	statSize      = 100
-	klBeta        = float32(latentDim) / float32(mnist.ImageSize)
+	klBeta        = float32(latentDim) / float32(cifar_10.ImageSizeRGB)
 
-	datasetPath = "./data/mnist"
-	weightsPath = "./data/vae-mnist/"
+	datasetPath = "./data/cifar-10"
+	weightsPath = "./data/vae-cifar-10/"
 	weightsFile = weightsPath + "model.json"
 )
 
@@ -48,7 +48,7 @@ func main() {
 
 	optimizer := pkg.CreateOptimizer(epochs, device)
 
-	vaeModel := pkg.CreateMnistVAETrainModel(miniBatchSize, latentDim, device, optimizer)
+	vaeModel := pkg.CreateCifarVAETrainModel(miniBatchSize, latentDim, device, optimizer)
 	vaeModel.Compile()
 
 	if err = vaeModel.LoadFromFile(weightsFile); err != nil {
@@ -74,9 +74,9 @@ func main() {
 	totalLoss := device.Add(reconMean, device.MulEqual(klMean, klWeight))
 	pipeline := device.GetTrainingPipeline(totalLoss)
 
-	trainDataset, err := mnist.CreateTrainingDataset(datasetPath)
+	trainDataset, err := cifar_10.CreateTrainingDataset(datasetPath)
 	if err != nil {
-		err = fmt.Errorf("mnist.CreateTrainingDataset: %w", err)
+		err = fmt.Errorf("cifar_10.CreateTrainingDataset: %w", err)
 		return
 	}
 

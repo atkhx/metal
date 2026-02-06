@@ -81,3 +81,26 @@ vae-mnist-gen-encode-interp: # Интерполяция между двумя р
 
 vae-mnist-gen-mix: # Покомпонентный микс латентов двух реальных изображений.
 	go run ./experiments/vae/mnist-generate -mode mix -batch 16
+
+### VAE CIFAR-10 Experiment
+
+vae-cifar-train:
+	go run ./experiments/vae/cifar-train
+
+vae-cifar-gen-random: # Случайные латенты z ~ N(0,1), просто сэмплирование.
+	go run ./experiments/vae/cifar-generate -mode random -batch 16
+
+vae-cifar-gen-interp: # Интерполяция между двумя случайными латентами.
+	go run ./experiments/vae/cifar-generate -mode interp -batch 16
+
+vae-cifar-gen-grid: # 2D-сетка по первым двум латентным измерениям.
+	go run ./experiments/vae/cifar-generate -mode grid -grid 8
+
+vae-cifar-gen-encode: # Реконструкция: энкодер+декодер на случайном батче CIFAR-10.
+	go run ./experiments/vae/cifar-generate -mode encode -batch 16
+
+vae-cifar-gen-encode-interp: # Интерполяция между двумя реальными изображениями CIFAR-10.
+	go run ./experiments/vae/cifar-generate -mode encode_interp -batch 16
+
+vae-cifar-gen-mix: # Покомпонентный микс латентов двух реальных изображений.
+	go run ./experiments/vae/cifar-generate -mode mix -batch 16

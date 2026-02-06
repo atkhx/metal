@@ -1,7 +1,7 @@
 package pkg
 
 import (
-	"github.com/atkhx/metal/dataset/mnist"
+	"github.com/atkhx/metal/dataset/cifar-10"
 	"github.com/atkhx/metal/mtl"
 	"github.com/atkhx/metal/nn/initializer"
 	"github.com/atkhx/metal/nn/layer"
@@ -11,44 +11,43 @@ import (
 )
 
 const (
-	MNISTBatchSize = 10
-
-	MNISTLatentDim       = 32
-	MNISTConvFiltersPre  = 64
-	MNISTConvFiltersPost = 32
+	CIFARLatentDim       = 128
+	CIFARBatchSize       = 16
+	CIFARConvFiltersPre  = 128
+	CIFARConvFiltersPost = 64
 )
 
-type MnistVAE struct {
+type CifarVAE struct {
 	*model.Model
 	muLogVar  *layer.Linear
 	vaeSample *layer.VAESample
 }
 
-func (m *MnistVAE) GetMuLogVar() *num.Data {
+func (m *CifarVAE) GetMuLogVar() *num.Data {
 	return m.muLogVar.GetOutput()
 }
 
-func (m *MnistVAE) GetVAESample() *num.Data {
+func (m *CifarVAE) GetVAESample() *num.Data {
 	return m.vaeSample.GetOutput()
 }
 
-func CreateMnistVAETrainModel(
+func CreateCifarVAETrainModel(
 	miniBatchSize int,
 	latentDim int,
 	device *proc.Device,
 	optimizer proc.Optimizer,
-) *MnistVAE {
+) *CifarVAE {
 	initCfg := model.DefaultInitConfig(initializer.DistributionUniform)
 
 	inDims := mtl.MTLSize{
-		W: mnist.ImageWidth,
-		H: mnist.ImageHeight,
-		D: mnist.ImageDepth * miniBatchSize,
+		W: cifar_10.ImageWidth,
+		H: cifar_10.ImageHeight,
+		D: cifar_10.ImageDepthRGB * miniBatchSize,
 	}
 
 	var layers layer.Layers
 
-	encoder, flatSize, _ := createEncoderBlock(inDims, initCfg, miniBatchSize, device)
+	encoder, flatSize, _ := createCifarEncoderBlock(inDims, initCfg, miniBatchSize, device)
 	layers = append(layers, encoder)
 
 	muLogVar := layer.NewLinear(latentDim*2, initCfg.Linear, true, nil)
@@ -57,67 +56,67 @@ func CreateMnistVAETrainModel(
 	layers = append(layers,
 		muLogVar,
 		vaeSample,
-		createDecoderBlock(initCfg, miniBatchSize, flatSize),
+		createCifarDecoderBlock(initCfg, miniBatchSize, flatSize),
 	)
 
-	return &MnistVAE{
+	return &CifarVAE{
 		Model:     model.New(inDims, layers, device, optimizer),
 		muLogVar:  muLogVar,
 		vaeSample: vaeSample,
 	}
 }
 
-func CreateMnistVAEInferenceModel(
+func CreateCifarVAEInferenceModel(
 	miniBatchSize int,
 	latentDim int,
 	device *proc.Device,
 	optimizer proc.Optimizer,
-) *MnistVAE {
+) *CifarVAE {
 	initCfg := model.DefaultInitConfig(initializer.DistributionUniform)
 
-	inDims := mtl.MTLSize{W: mnist.ImageWidth, H: mnist.ImageHeight, D: mnist.ImageDepth * miniBatchSize}
-	_, flatSize, nDims := createEncoderBlock(inDims, initCfg, miniBatchSize, device)
+	inDims := mtl.MTLSize{W: cifar_10.ImageWidth, H: cifar_10.ImageHeight, D: cifar_10.ImageDepthRGB * miniBatchSize}
+	_, flatSize, _ := createCifarEncoderBlock(inDims, initCfg, miniBatchSize, device)
 
-	nDims = mtl.NewMTLSize(latentDim, 1, miniBatchSize)
+	nDims := mtl.NewMTLSize(latentDim, 1, miniBatchSize)
 
-	return &MnistVAE{
+	return &CifarVAE{
 		Model: model.New(nDims, layer.Layers{
 			&layer.NoopLayer{},
 			&layer.NoopLayer{},
 			&layer.NoopLayer{},
-			createDecoderBlock(initCfg, miniBatchSize, flatSize),
+			createCifarDecoderBlock(initCfg, miniBatchSize, flatSize),
 		}, device, optimizer),
 	}
 }
 
-func createDecoderBlock(
+func createCifarDecoderBlock(
 	initCfg model.InitConfig,
 	miniBatchSize int,
 	flatSize int,
 ) *layer.VAEDecoder {
 	return &layer.VAEDecoder{Layers: layer.Layers{
 		layer.NewLinear(flatSize, initCfg.Linear, true, nil),
-		layer.NewReshape(mtl.MTLSize{W: 7, H: 7, D: MNISTConvFiltersPre * miniBatchSize}),
+		layer.NewReshape(mtl.MTLSize{W: 8, H: 8, D: CIFARConvFiltersPre * miniBatchSize}),
 
-		layer.NewUpSample2D(2), // 7 → 14
-		layer.NewConv(3, MNISTConvFiltersPost, miniBatchSize, 1, 1, initCfg.Conv, nil),
+		layer.NewUpSample2D(2), // 8 → 16
+		layer.NewConv(3, CIFARConvFiltersPost, miniBatchSize, 1, 1, initCfg.Conv, nil),
 		layer.NewReLu(),
 
-		layer.NewUpSample2D(2), // 14 → 28
-		layer.NewConv(3, 1, miniBatchSize, 1, 1, initCfg.Conv, nil),
-		layer.NewSigmoid(), // MNIST
+		layer.NewUpSample2D(2), // 16 → 32
+		layer.NewConv(3, cifar_10.ImageDepthRGB, miniBatchSize, 1, 1, initCfg.Conv, nil),
+		layer.NewSigmoid(),
 	}}
 }
 
-func createEncoderBlock(
+func createCifarEncoderBlock(
 	nDims mtl.MTLSize,
 	initCfg model.InitConfig,
 	miniBatchSize int,
 	device *proc.Device,
 ) (*layer.VAEEncoder, int, mtl.MTLSize) {
 	var layers layer.Layers
-	{ // Conv block 1: [28, 28, miniBatchSize] -> [14, 14, miniBatchSize * filtersCount]
-		filterSize, filtersCount := 3, MNISTConvFiltersPre
+	{ // Conv block 1: [32, 32, batch*3] -> [16, 16, batch*filters]
+		filterSize, filtersCount := 3, CIFARConvFiltersPre
 		convPadding, convStride := 1, 1
 		poolSize, poolStride, poolPadding := 2, 2, 0
 		layers = append(layers,
@@ -128,8 +127,8 @@ func createEncoderBlock(
 		nDims = device.GetConvSize(nDims.W, filterSize, filtersCount, miniBatchSize, convPadding, convStride)
 		nDims = device.GetPoolSize(nDims, poolSize, poolPadding, poolStride)
 	}
-	{ // Conv block 2: [14, 14, miniBatchSize] -> [7, 7, miniBatchSize * filtersCount]
-		filterSize, filtersCount := 3, MNISTConvFiltersPre
+	{ // Conv block 2: [16, 16, batch*filters] -> [8, 8, batch*filters]
+		filterSize, filtersCount := 3, CIFARConvFiltersPre
 		convPadding, convStride := 1, 1
 		poolSize, poolStride, poolPadding := 2, 2, 0
 
@@ -142,12 +141,9 @@ func createEncoderBlock(
 		nDims = device.GetConvSize(nDims.W, filterSize, filtersCount, miniBatchSize, convPadding, convStride)
 		nDims = device.GetPoolSize(nDims, poolSize, poolPadding, poolStride)
 	}
-	// Flatten
-	// [7, 7, miniBatchSize * filtersCount]
+
 	flatSize := nDims.Length() / miniBatchSize
 	nDims = mtl.NewMTLSize(flatSize, 1, miniBatchSize)
-	// [7 x 7 x filtersCount, 1, miniBatchSize]
-	// [7 x 7 x 64, 1, miniBatchSize]
 	layers = append(layers, layer.NewReshape(nDims))
 	return &layer.VAEEncoder{Layers: layers}, flatSize, nDims
 }
