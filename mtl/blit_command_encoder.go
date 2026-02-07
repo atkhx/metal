@@ -15,6 +15,16 @@ void mtlBlitCommandEncoderFillBuffer(void *encID, void *bufferID, NSRange range,
 	];
 }
 
+void mtlBlitCommandEncoderCopyBuffer(void *encID, void *srcBufferID, NSUInteger srcOffset, void *dstBufferID, NSUInteger dstOffset, NSUInteger size) {
+	[(id<MTLBlitCommandEncoder>)encID
+		copyFromBuffer:(id<MTLBuffer>)srcBufferID
+		sourceOffset:srcOffset
+		toBuffer:(id<MTLBuffer>)dstBufferID
+		destinationOffset:dstOffset
+		size:size
+	];
+}
+
 void mtlBlitCommandEncoderEndEncoding(void *encID) {
 	[(id<MTLBlitCommandEncoder>)encID endEncoding];
 }
@@ -43,6 +53,17 @@ func (e *BlitCommandEncoder) GetID() unsafe.Pointer {
 
 func (e *BlitCommandEncoder) FillBuffer(buffer *Buffer, nsRange NSRange, value byte) {
 	C.mtlBlitCommandEncoderFillBuffer(e.id, buffer.GetID(), nsRange.C(), C.uint8_t(value))
+}
+
+func (e *BlitCommandEncoder) CopyBuffer(src *Buffer, srcOffset uint64, dst *Buffer, dstOffset uint64, size uint64) {
+	C.mtlBlitCommandEncoderCopyBuffer(
+		e.id,
+		src.GetID(),
+		C.NSUInteger(srcOffset),
+		dst.GetID(),
+		C.NSUInteger(dstOffset),
+		C.NSUInteger(size),
+	)
 }
 
 func (e *BlitCommandEncoder) EndEncoding() {

@@ -21,7 +21,7 @@ var (
 	klBeta        = float32(latentDim) / float32(vaephoto.PhotoPatchSize*vaephoto.PhotoPatchSize*vaephoto.ImageDepthRGB)
 
 	datasetPath = "./data/vae-photo/data"
-	weightsFile = "./experiments/vae-photo/vae-photo.json"
+	weightsFile = "./data/vae-photo/model.json"
 )
 
 func main() {

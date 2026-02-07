@@ -21,8 +21,8 @@ var (
 	miniBatchSize = 16
 	latentDim     = vaephoto.PhotoLatentDim
 
-	weightsFile = "./experiments/vae-photo/vae-photo.json"
-	outDir      = "./experiments/vae-photo/out"
+	weightsFile = "./data/vae-photo/model.json"
+	outputDir   = "./data/vae-photo/out"
 	datasetPath = "./data/vae-photo/data"
 )
 
@@ -86,7 +86,7 @@ func main() {
 	outData := vaeModel.GetOutput()
 	pipeline := device.GetInferencePipeline(outData)
 
-	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
 		err = fmt.Errorf("os.MkdirAll: %w", err)
 		return
 	}
@@ -168,7 +168,7 @@ func main() {
 			return
 		}
 		for i := 0; i < miniBatchSize; i++ {
-			inName := fmt.Sprintf("%s/input_%02d.png", outDir, i)
+			inName := fmt.Sprintf("%s/input_%02d.png", outputDir, i)
 			if e := os.WriteFile(inName, inImgs[i], os.ModePerm); e != nil {
 				err = fmt.Errorf("os.WriteFile input: %w", e)
 				return
@@ -184,7 +184,7 @@ func main() {
 			return
 		}
 		for i := 0; i < 2; i++ {
-			inName := fmt.Sprintf("%s/input_%02d.png", outDir, i)
+			inName := fmt.Sprintf("%s/input_%02d.png", outputDir, i)
 			if e := os.WriteFile(inName, inImgs[i], os.ModePerm); e != nil {
 				err = fmt.Errorf("os.WriteFile input: %w", e)
 				return
@@ -193,7 +193,7 @@ func main() {
 	}
 
 	for i := 0; i < miniBatchSize; i++ {
-		outName := fmt.Sprintf("%s/%s_%02d.png", outDir, *mode, i)
+		outName := fmt.Sprintf("%s/%s_%02d.png", outputDir, *mode, i)
 		if e := os.WriteFile(outName, outImgs[i], os.ModePerm); e != nil {
 			err = fmt.Errorf("os.WriteFile output: %w", e)
 			return

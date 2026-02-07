@@ -13,10 +13,10 @@ import (
 
 const (
 	PhotoPatchSize      = 100
-	PhotoLatentDim      = 128
-	PhotoBatchSize      = 4
-	PhotoConvFiltersPre = 32
-	PhotoConvFiltersMid = 32
+	PhotoLatentDim      = 256
+	PhotoBatchSize      = 10
+	PhotoConvFiltersPre = 64
+	PhotoConvFiltersMid = 64
 )
 
 type PhotoVAE struct {

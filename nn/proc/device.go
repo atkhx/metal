@@ -18,6 +18,7 @@ import (
 	"github.com/atkhx/metal/nn/ops/gelu"
 	"github.com/atkhx/metal/nn/ops/gelunew"
 	"github.com/atkhx/metal/nn/ops/layernormrows"
+	"github.com/atkhx/metal/nn/ops/layernormrows_opt"
 	"github.com/atkhx/metal/nn/ops/matmul"
 	"github.com/atkhx/metal/nn/ops/maxpool"
 	"github.com/atkhx/metal/nn/ops/mean"
@@ -28,6 +29,7 @@ import (
 	"github.com/atkhx/metal/nn/ops/positionaladd"
 	"github.com/atkhx/metal/nn/ops/relu"
 	"github.com/atkhx/metal/nn/ops/rmsnormrows"
+	"github.com/atkhx/metal/nn/ops/rmsnormrows_opt"
 	"github.com/atkhx/metal/nn/ops/ropecols"
 	"github.com/atkhx/metal/nn/ops/sanitize"
 	"github.com/atkhx/metal/nn/ops/sigmoid"
@@ -191,9 +193,21 @@ func (d *Device) RMSNorm(input *num.Data, width int) *num.Data {
 	return d.assocKernel(output, kernel)
 }
 
+func (d *Device) RMSNormOpt(input *num.Data, width int) *num.Data {
+	output := d.newLinkedCopy(input)
+	kernel := rmsnormrowsopt.New(d.mtlDevice, input, output, width)
+	return d.assocKernel(output, kernel)
+}
+
 func (d *Device) LayerNorm(input *num.Data, width int, eps float32) *num.Data {
 	output := d.newLinkedCopy(input)
 	kernel := layernormrows.New(d.mtlDevice, input, output, width, eps)
+	return d.assocKernel(output, kernel)
+}
+
+func (d *Device) LayerNormOpt(input *num.Data, width int, eps float32) *num.Data {
+	output := d.newLinkedCopy(input)
+	kernel := layernormrowsopt.New(d.mtlDevice, input, output, width, eps)
 	return d.assocKernel(output, kernel)
 }
 

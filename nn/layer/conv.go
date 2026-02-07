@@ -2,6 +2,7 @@ package layer
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/atkhx/metal/mtl"
 	"github.com/atkhx/metal/nn/initializer"
@@ -15,7 +16,6 @@ func NewConv(
 	batchSize int,
 	padding int,
 	stride int,
-
 	initWeights initializer.Initializer,
 	provideWeights func(weights *num.Data),
 ) *Conv {
@@ -49,6 +49,7 @@ type Conv struct {
 	padding      int
 	stride       int
 
+	// weights are stored in MPS layout: [out][kH][kW][in]
 	weightObj *num.Data
 	biasesObj *num.Data
 
@@ -67,13 +68,20 @@ func (l *Conv) Compile(device *proc.Device, input *num.Data) *num.Data {
 	if input.Dims.D%l.batchSize != 0 {
 		panic("Conv: input depth must be divisible by batchSize")
 	}
-	filterDepth := input.Dims.D / l.batchSize
+	if l.padding != 0 && l.padding != 1 {
+		panic(fmt.Sprintf("Conv: padding %d not supported (only 0 or 1)", l.padding))
+	}
+	if l.stride != 1 {
+		panic(fmt.Sprintf("Conv: stride %d not supported (only 1)", l.stride))
+	}
 
+	filterDepth := input.Dims.D / l.batchSize
 	fanIn := l.filterSize * l.filterSize * filterDepth
 	fanOut := l.filterSize * l.filterSize * l.filtersCount
 
 	mFilterSize := mtl.NewMTLSize(l.filterSize, l.filterSize, filterDepth*l.filtersCount)
 
+	// Init weights in OIHW then reorder to MPS layout OHWI.
 	l.weightObj = initWeights(device, l.initWeights, mFilterSize, fanIn, fanOut)
 	l.biasesObj = device.NewData(mtl.NewMTLSize(1, 1, l.filtersCount))
 	l.forUpdate = []*num.Data{l.weightObj, l.biasesObj}

@@ -1,47 +1,37 @@
-#ifndef convKernel_h
-#define convKernel_h
+#ifndef MPSConvKernel_h
+#define MPSConvKernel_h
 
 #import <Foundation/Foundation.h>
-#import <Metal/Metal.h>
 #import <MetalPerformanceShaders/MetalPerformanceShaders.h>
 
-@protocol convKernel <NSObject>
+@protocol MPSConvKernel <NSObject>
+- (id<MTLTexture>)inputTexture;
+- (id<MTLTexture>)outputTexture;
+- (id<MTLTexture>)outputGradTexture;
+- (id<MTLTexture>)inputGradTexture;
 
-- (instancetype) initWithDevice:(id<MTLDevice>)device kernelSource:(NSString*)kernelSource;
+- (void)encodeForward:(id<MTLCommandBuffer>)commandBuffer;
+- (void)encodeBackward:(id<MTLCommandBuffer>)commandBuffer;
 
-- (void) forward:(id<MTLCommandBuffer>)commandBuffer
-        inputData:(id<MTLBuffer>)inputData
-        weightsData:(id<MTLBuffer>)weightsData
-        biasesData:(id<MTLBuffer>)biasesData
-        outputData:(id<MTLBuffer>)outputData
-        iDims:(MTLSize)iDims
-        wDims:(MTLSize)wDims
-        oDims:(MTLSize)oDims
-        filtersCount:(uint)filtersCount
-        batchSize:(uint)batchSize
-        padding:(uint)padding
-        stride:(uint)stride;
+- (id<MTLBuffer>)weightsGradBuffer;
+- (id<MTLBuffer>)biasGradBuffer;
 
-- (void) backward:(id<MTLCommandBuffer>)commandBuffer
-        inputData:(id<MTLBuffer>)inputData
-        inputGrad:(id<MTLBuffer>)inputGrad
-        weightsData:(id<MTLBuffer>)weightsData
-        weightsGrad:(id<MTLBuffer>)weightsGrad
-        biasesGrad:(id<MTLBuffer>)biasesGrad
-        outputGrad:(id<MTLBuffer>)outputGrad
-        iDims:(MTLSize)iDims
-        wDims:(MTLSize)wDims
-        oDims:(MTLSize)oDims
-        filtersCount:(uint)filtersCount
-        batchSize:(uint)batchSize
-        padding:(uint)padding
-        stride:(uint)stride;
-
+- (void)reloadWeights;
 @end
 
-
-@interface convKernelImpl : NSObject <convKernel>
-    @property (nonatomic, strong) id<MTLLibrary> library;
+@interface MPSConvKernelImpl : NSObject <MPSConvKernel>
+- (instancetype)initWithDevice:(id<MTLDevice>)device
+                     inputWidth:(NSUInteger)inW
+                    inputHeight:(NSUInteger)inH
+                   inputChannels:(NSUInteger)inC
+                  outputChannels:(NSUInteger)outC
+                    kernelWidth:(NSUInteger)kW
+                   kernelHeight:(NSUInteger)kH
+                          stride:(NSUInteger)stride
+                         padding:(NSUInteger)padding
+                       batchSize:(NSUInteger)batchSize
+                          weights:(id<MTLBuffer>)weights
+                            biases:(id<MTLBuffer>)biases;
 @end
 
-#endif /* convKernel_h */
+#endif /* MPSConvKernel_h */
